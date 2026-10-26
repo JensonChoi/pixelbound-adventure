@@ -22,6 +22,22 @@ npm run preview
 
 The production build creates the usual Vite site in `dist/` and a self-contained **`dist/play.html`**. You can open `play.html` directly in a browser, without a server or internet connection. Audio begins after a keyboard or pointer interaction.
 
+## CI and deployment
+
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs on every branch push, pull requests to `main`, and manual dispatch. It installs locked dependencies with `npm ci` on Node.js 22, runs the gameplay regression tests, and type-checks and builds the production site and offline game. A failed test or build prevents deployment.
+
+Successful pushes to `main` deploy `dist/` to GitHub Pages. Feature branches and pull requests only run validation. Deployment uses GitHub's built-in token with Pages and OIDC permissions scoped to the deployment job; no personal access token or repository secrets are needed. Deployments run one at a time.
+
+One-time setup:
+
+1. In the repository's [Settings → Pages](https://github.com/JensonChoi/super-mario-bros-clone/settings/pages), set **Build and deployment → Source** to **GitHub Actions**.
+2. Merge the workflow into `main`. That push runs validation and the first deployment.
+3. Open the URL shown by the deployment job: **https://jensonchoi.github.io/super-mario-bros-clone/**. The offline game is also available at **https://jensonchoi.github.io/super-mario-bros-clone/play.html**.
+
+To redeploy, open **Actions → CI and deploy to GitHub Pages → Run workflow** and select `main`. A manual run on another branch validates it without publishing. Check the workflow logs and the `github-pages` environment for deployment status and any required environment approvals. To roll back, revert the unwanted change on `main`; the resulting push rebuilds and redeploys it.
+
+Vite emits relative asset URLs so the same build works under the GitHub Pages repository path or at a domain root. Generated files stay in the workflow artifact and are not committed. See the [GitHub Pages workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages) for hosting details.
+
 ## Controls
 
 | Action | Keys |
