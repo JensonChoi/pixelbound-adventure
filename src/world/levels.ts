@@ -1,3 +1,4 @@
+import { ceilingSecret, firstDestinations, remainingLevels } from './expansion';
 import { block, coins, enemy, makeLevel, pipe, rect, stairs, type LevelDefinition } from './Level';
 function overworld() {
     const l = makeLevel('1-1', 'A familiar beginning', 'overworld', 218);
@@ -129,5 +130,20 @@ function castle() {
 function bonus() { const l = makeLevel('bonus', 'A little secret', 'underground', 32); l.bonus = true; rect(l, 0, 13, 32, 2); rect(l, 0, 2, 32, 1, 'brick'); rect(l, 0, 3, 1, 10, 'brick'); rect(l, 7, 10, 13, 3, 'brick'); for (let y = 6; y < 10; y++)
     coins(l, 8, y, 11); pipe(l, 25, 10); l.pipes.push({ x: 400, y: 160, target: '1-1', spawnX: 163 * 16 + 10, spawnY: 176 }); l.goal = 99999; return l; }
 function exit() { const l = makeLevel('1-2-exit', 'Back in the sunshine', 'overworld', 48); l.bonus = true; rect(l, 0, 13, 48, 2); pipe(l, 1, 12); stairs(l, 21, 8); l.goal = 35 * 16; return l; }
-export const LEVELS: Record<string, LevelDefinition> = Object.fromEntries([overworld(), underground(), treetops(), castle(), bonus(), exit()].map(l => [l.id, l]));
-export const PROGRESSION = ['1-1', '1-2', '1-3', '1-4'];
+const original = [overworld(), underground(), treetops(), castle(), bonus(), exit()];
+ceilingSecret(original[1], [4, 3, 2]);
+original[3].lava = [{ x: 0, y: 223, width: original[3].width }];
+original[3].bridge = { start: 109, end: 125, row: 11 };
+export const LEVELS: Record<string, LevelDefinition> = Object.fromEntries([...original, ...firstDestinations(), ...remainingLevels(original[1])].map(l => [l.id, l]));
+export const PROGRESSION = Array.from({ length: 8 }, (_, w) => Array.from({ length: 4 }, (_, s) => `${w + 1}-${s + 1}`)).flat();
+
+// Fail early for authored data; runtime load() also rejects invalid external IDs safely.
+export function validateLevels() {
+    for (const id of PROGRESSION) if (!LEVELS[id]) throw new Error(`Missing playable stage: ${id}`);
+    for (const level of Object.values(LEVELS)) {
+        if (level.width < 256 || level.time <= 0) throw new Error(`Invalid bounds or timer: ${level.id}`);
+        for (const link of [...level.pipes, ...(level.vines ?? [])]) if (!LEVELS[link.target]) throw new Error(`Invalid destination from ${level.id}: ${link.target}`);
+        for (const zone of level.warpZones ?? []) if (zone.pipeIds.some(id => !level.pipes.some(p => p.id === id && p.warp))) throw new Error(`Invalid warp zone: ${level.id}`);
+    }
+}
+validateLevels();

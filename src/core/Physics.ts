@@ -60,3 +60,5 @@ export function move(b: Body, l: LevelDefinition, head?: (x: number, y: number, 
     }
     return result;
 }
+
+export const WATER_PHYSICS = { speed: 1.45, acceleration: .06, friction: .03, gravity: .055, swim: 2.3, maxFall: 1.4 };

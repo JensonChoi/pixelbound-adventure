@@ -1,6 +1,6 @@
 import { build } from 'esbuild';
 import { writeFile, mkdir } from 'node:fs/promises';
-const result=await build({entryPoints:['src/main.ts'],bundle:true,format:'iife',write:false,outdir:'dist',minify:true});
+const result=await build({entryPoints:['src/main.ts'],bundle:true,format:'iife',write:false,outdir:'dist',minify:true,define:{'import.meta.env.DEV':'false'}});
 const js=result.outputFiles.find(f=>f.path.endsWith('.js')).text;
 const css=result.outputFiles.find(f=>f.path.endsWith('.css')).text;
 await mkdir('dist',{recursive:true});

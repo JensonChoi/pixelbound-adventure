@@ -1,19 +1,25 @@
 export const TILE = 16;
-export type Theme = 'overworld' | 'underground' | 'castle';
-export type TileKind = 'ground' | 'brick' | 'question' | 'used' | 'stone' | 'pipeL' | 'pipeR' | 'pipeBodyL' | 'pipeBodyR' | 'hidden';
-export type ItemKind = 'coin' | 'power' | 'star' | 'life';
+export type Theme = 'overworld' | 'underground' | 'castle' | 'night' | 'underwater' | 'athletic' | 'sky';
+export type TileKind = 'ground' | 'brick' | 'question' | 'used' | 'stone' | 'pipeL' | 'pipeR' | 'pipeBodyL' | 'pipeBodyR' | 'hidden' | 'mushroom';
+export type ItemKind = 'coin' | 'power' | 'star' | 'life' | 'vine';
 export interface Tile {
     kind: TileKind;
     item?: ItemKind;
     bump: number;
 }
-export type EnemyKind = 'goomba' | 'green' | 'red' | 'plant' | 'bowser';
+export type EnemyKind = 'goomba' | 'green' | 'red' | 'plant' | 'bowser' | 'cheep' | 'leapingCheep' | 'blooper' | 'hammerBro' | 'lakitu' | 'spiny' | 'egg' | 'bullet' | 'buzzy' | 'podoboo';
 export interface EnemySpawn {
     kind: EnemyKind;
     x: number;
     y: number;
 }
+export type LevelId = `${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}-${1 | 2 | 3 | 4}`;
+export interface VineDef { x: number; bottom: number; top: number; target: string; spawnX: number; spawnY: number; }
+export interface MazeGate { x: number; minY: number; maxY: number; returnX: number; returnY: number; }
 export interface PlatformDef {
+    kind?: 'oscillating' | 'balance' | 'falling';
+    pair?: string;
+    side?: 1 | -1;
     x: number;
     y: number;
     width: number;
@@ -22,6 +28,9 @@ export interface PlatformDef {
     speed: number;
 }
 export interface PipeLink {
+    id?: string;
+    warp?: boolean;
+    secret?: boolean;
     x: number;
     y: number;
     target: string;
@@ -30,6 +39,15 @@ export interface PipeLink {
 }
 export interface LevelDefinition {
     id: string;
+    stageId?: LevelId;
+    spawns?: Record<string, { x: number; y: number }>;
+    warpZones?: { x: number; y: number; pipeIds: string[] }[];
+    vines?: VineDef[];
+    lava?: { x: number; y: number; width: number }[];
+    mazes?: MazeGate[];
+    cannons?: { x: number; y: number; period: number }[];
+    bridge?: { start: number; end: number; row: number };
+    bowser?: { firePeriod: number; jumpPeriod: number; hammers: boolean };
     name: string;
     theme: Theme;
     width: number;
@@ -50,6 +68,8 @@ export interface LevelDefinition {
         x: number;
         y: number;
         length: number;
+        speed?: number;
+        angle?: number;
     }[];
     goal: number;
     bonus?: boolean;
