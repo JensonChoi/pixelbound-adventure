@@ -1,6 +1,7 @@
 import { Game, GameState } from '../core/Game';
 import { sprite, text } from './PixelArt';
 import type { Tile, Theme } from '../world/Level';
+import { playerPalette, playerSprite } from './PlayerAppearance';
 export class Renderer {
     ctx: CanvasRenderingContext2D;
     constructor(public canvas: HTMLCanvasElement) { this.ctx = canvas.getContext('2d')!; this.ctx.imageSmoothingEnabled = false; }
@@ -20,6 +21,11 @@ export class Renderer {
         c.save();
         c.translate(-Math.floor(g.camera), 0);
         const left = Math.floor(g.camera / 16), right = left + 17;
+        // Solid chamber floors occlude lava; pits retain their visible surface.
+        for (const lava of g.level.lava ?? []) {
+            c.fillStyle = '#c53218'; c.fillRect(lava.x, lava.y, lava.width, 240 - lava.y);
+            c.fillStyle = '#ffc247'; for (let x = lava.x; x < lava.x + lava.width; x += 8) c.fillRect(x, lava.y + Math.floor((x + g.frame) / 8) % 2 * 2, 6, 3);
+        }
         for (const [key, t] of Object.entries(g.level.tiles)) {
             const [x, y] = key.split(',').map(Number);
             if (x < left - 1 || x > right || t.kind === 'hidden')
@@ -41,10 +47,6 @@ export class Renderer {
         for (const cannon of g.level.cannons ?? []) {
             c.fillStyle = '#252634'; c.fillRect(cannon.x, cannon.y, 16, 13);
             c.fillStyle = '#f6edda'; c.fillRect(cannon.x + 4, cannon.y + 3, 8, 3); c.fillRect(cannon.x + 7, cannon.y + 6, 3, 4);
-        }
-        for (const lava of g.level.lava ?? []) {
-            c.fillStyle = '#c53218'; c.fillRect(lava.x, lava.y, lava.width, 240 - lava.y);
-            c.fillStyle = '#ffc247'; for (let x = lava.x; x < lava.x + lava.width; x += 8) c.fillRect(x, lava.y + Math.floor((x + g.frame) / 8) % 2 * 2, 6, 3);
         }
         for (const link of g.level.pipes) {
             if (!link.warp && Math.abs(g.player.x - link.x) < 48 && g.state === GameState.PLAYING) {
@@ -106,10 +108,15 @@ export class Renderer {
             if (f.hostile)
                 this.flame(f.x + 9, f.y + 3, g.frame + 3);
         }
+        if (g.level.ending && g.state !== GameState.TITLE) {
+            const ending = g.level.ending;
+            const celebrate = g.castlePhase === 'dialogue' && Math.floor(g.frame / 24) % 2 === 0;
+            sprite(c, ending.character + (celebrate ? 'Celebrate' : ''), ending.x, ending.floorY - (ending.character === 'peach' ? 28 : 16), { flip: ending.character === 'peach' });
+        }
         if (g.state !== GameState.TITLE)
             this.player(g);
         else
-            sprite(c, 'mario', 40, 192);
+            sprite(c, 'mario', 40, 192, { palette: playerPalette(g.selectedCharacter) });
         for (const p of g.particles) {
             if (p.text)
                 text(c, p.text, p.x, p.y, '#fff', 1, 'center');
@@ -129,10 +136,15 @@ export class Renderer {
             text(c, 'ENTER TO CONTINUE', 128, 122, '#ffca68', 1, 'center');
             text(c, 'RESTART BUTTON BELOW', 128, 142, '#aeb4bd', 1, 'center');
         }
-        if (g.state === GameState.LEVEL_COMPLETE && g.time === 0) {
+        if (g.state === GameState.LEVEL_COMPLETE && g.castlePhase === 'dialogue') {
+            const lines = g.rescueDialogue;
+            lines.forEach((line, i) => text(c, line, 128, 72 + i * 24, '#fff', 1, 'center'));
+            text(c, 'PRESS ENTER TO CONTINUE', 128, 151, '#fff', 1, 'center');
+        }
+        else if (g.state === GameState.LEVEL_COMPLETE && !g.level.ending && g.time === 0) {
             c.fillStyle = '#101414';
             c.fillRect(32, 72, 192, 43);
-            text(c, g.level.axe ? 'BRIDGE CLEARED!' : 'COURSE CLEAR!', 128, 82, '#ffca68', 1, 'center');
+            text(c, 'COURSE CLEAR!', 128, 82, '#ffca68', 1, 'center');
             text(c, 'ON TO THE NEXT ADVENTURE', 128, 99, '#fff1df', 1, 'center');
         }
     }
@@ -143,7 +155,7 @@ export class Renderer {
         const dead = g.state === GameState.PLAYER_DYING;
         const jumping = !p.grounded;
         const frame = p.climbing !== null || p.swimming ? Math.floor(g.frame / 8) % 3 - 1 : dead ? 2 : p.skidding ? -2 : jumping ? (p.vy < 0 ? 1 : 2) : Math.abs(p.vx) > .1 ? Math.floor(p.walk) % 3 - 1 : 0;
-        const palette: Record<string, string> = p.star || p.transform && Math.floor(g.frame / 3) % 2 ? { r: ['#fff1df', '#60e5ba', '#ffcc49', '#ef718b'][Math.floor(g.frame / 4) % 4], b: '#3c5db7' } : p.power === 2 ? { r: '#fff1df', b: '#d43b21' } : {};
+        const palette = playerPalette(g.selectedCharacter, p.power, !!(p.star || p.transform && Math.floor(g.frame / 3) % 2), g.frame);
         c.save();
         if (g.state === GameState.PIPE) {
             const column = Math.floor((p.x + p.w / 2) / 16);
@@ -159,10 +171,11 @@ export class Renderer {
             c.rect(g.camera, 0, 256, surface);
             c.clip();
         }
-        sprite(c, p.swimming ? (p.h > 16 ? 'marioBigSwim' : 'marioSwim') : p.climbing !== null ? (p.h > 16 ? 'marioBigClimb' : 'marioClimb') : p.h > 16 ? 'marioBig' : 'mario', p.x - 2, p.y, { flip: p.facing < 0, palette, frame });
+        const celebrating = g.castlePhase === 'dialogue';
+        sprite(c, playerSprite(p, celebrating && Math.floor(g.frame / 24) % 2 === 0), p.x - 2, p.y, { flip: p.facing < 0, palette, frame: celebrating ? 0 : frame });
         c.restore();
     }
-    private hud(g: Game) { const c = this.ctx; text(c, 'MARIO', 16, 12); text(c, String(g.score).padStart(6, '0'), 16, 22); this.coin(89, 21, g.frame); text(c, 'X' + String(g.coins).padStart(2, '0'), 99, 22); text(c, 'WORLD', 151, 12); text(c, g.world, 157, 22); text(c, 'TIME', 214, 12); text(c, String(Math.max(0, Math.ceil(g.time))).padStart(3, '0'), 220, 22); }
+    private hud(g: Game) { const c = this.ctx; text(c, g.character.displayName, 16, 12); text(c, String(g.score).padStart(6, '0'), 16, 22); this.coin(89, 21, g.frame); text(c, 'X' + String(g.coins).padStart(2, '0'), 99, 22); text(c, 'WORLD', 151, 12); text(c, g.world, 157, 22); text(c, 'TIME', 214, 12); text(c, String(Math.max(0, Math.ceil(g.time))).padStart(3, '0'), 220, 22); }
     private title(g: Game) {
         const c = this.ctx;
         c.fillStyle = '#612712';
@@ -183,27 +196,31 @@ export class Renderer {
         text(c, 'MARIO BROS.', 128, 88, '#6d2815', 3, 'center');
         text(c, 'MARIO BROS.', 126, 86, '#fff0c4', 3, 'center');
         text(c, 'THE 8-BIT ADVENTURE', 128, 115, '#ffe5b1', 1, 'center');
-        text(c, '1 PLAYER GAME', 128, 145, '#fff1df', 1, 'center');
-        if (Math.floor(g.frame / 35) % 2 === 0)
-            text(c, '> PRESS ENTER', 128, 163, '#fff1df', 1, 'center');
-        text(c, 'TOP ' + String(g.best).padStart(6, '0'), 128, 185, '#fff1df', 1, 'center');
+        text(c, '1 PLAYER GAME', 128, 138, '#fff1df', 1, 'center');
+        text(c, 'SELECT PLAYER', 128, 152, '#fff1df', 1, 'center');
+        text(c, 'MARIO', 116, 166); text(c, 'LUIGI', 116, 180);
+        text(c, '>', 102, g.selectedCharacter === 'mario' ? 166 : 180);
+        sprite(c, 'mario', 158, 165, { palette: playerPalette(g.selectedCharacter) });
+        text(c, 'PRESS ENTER TO START', 128, 197, '#fff1df', 1, 'center');
+        text(c, 'TOP ' + String(g.best).padStart(6, '0'), 128, 224, '#fff1df', 1, 'center');
     }
     private screen(g: Game) { const c = this.ctx; if (g.state === GameState.LEVEL_INTRO) {
         text(c, 'WORLD ' + g.world, 128, 84, '#fff1df', 2, 'center');
-        sprite(c, 'mario', 103, 116);
+        sprite(c, 'mario', 103, 116, { palette: playerPalette(g.selectedCharacter) });
         text(c, 'X ' + g.lives, 130, 121);
         text(c, g.level.name, 128, 157, '#a3adb9', 1, 'center');
     }
     else if (g.state === GameState.GAME_OVER) {
         text(c, 'GAME OVER', 128, 91, '#fff1df', 2, 'center');
-        text(c, 'EVERY HERO GETS ANOTHER TRY', 128, 126, '#b1b4bd', 1, 'center');
+        text(c, g.character.displayName + ', TRY AGAIN!', 128, 126, '#b1b4bd', 1, 'center');
         text(c, 'PRESS ENTER', 128, 154, '#ffca68', 1, 'center');
     }
     else {
-        text(c, 'THANK YOU MARIO!', 128, 66, '#ffca68', 2, 'center');
-        sprite(c, 'mario', 116, 94, { scaleY: 2 });
+        text(c, `THANK YOU ${g.character.displayName}!`, 128, 66, '#ffca68', 2, 'center');
+        sprite(c, 'marioBigCelebrate', 104, 99, { palette: playerPalette(g.selectedCharacter, g.player.power) });
+        sprite(c, 'peachCelebrate', 136, 99, { flip: true });
         text(c, 'THE KINGDOM IS SAFE.', 128, 146, '#fff1df', 1, 'center');
-        text(c, 'ALL EIGHT WORLDS SAVED', 128, 166, '#a3adb9', 1, 'center');
+        text(c, 'FINAL SCORE ' + String(g.score).padStart(6, '0'), 128, 166, '#a3adb9', 1, 'center');
         text(c, 'PRESS ENTER TO PLAY AGAIN', 128, 194, '#ffca68', 1, 'center');
     } }
     private coin(x: number, y: number, frame: number) { const c = this.ctx; const w = [6, 4, 2, 4][Math.floor(frame / 8) % 4]; c.fillStyle = '#79460d'; c.fillRect(Math.round(x + 4 - w / 2), y, w, 10); c.fillStyle = '#ffbc37'; c.fillRect(Math.round(x + 3 - w / 2), y, w, 9); c.fillStyle = '#fff1a4'; c.fillRect(Math.round(x + 3 - w / 2), y + 1, 1, 6); }
@@ -317,9 +334,11 @@ export class Renderer {
         if (g.level.goal < g.level.width) {
             const x = Math.floor(g.level.goal - camera);
             if (g.level.axe) {
-                sprite(c, 'axe', x, 160);
-                c.fillStyle = '#a6a5ab';
-                c.fillRect(x - 18, 175, 20, 2);
+                if (g.state !== GameState.LEVEL_COMPLETE) {
+                    sprite(c, 'axe', x, 160);
+                    c.fillStyle = '#a6a5ab';
+                    c.fillRect(x - 18, 175, 20, 2);
+                }
             }
             else {
                 c.fillStyle = '#447b16';

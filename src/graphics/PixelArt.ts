@@ -1,6 +1,12 @@
 // Hand-drawn grids. Each character is one pixel; no external sprite assets.
-export const PALETTE: Record<string, string> = { r: '#d43b21', s: '#ffb66b', b: '#793b20', k: '#211b15', w: '#fff1d2', g: '#73ad12', G: '#286b0b', y: '#ffc437', o: '#e88325', c: '#70c9e8', B: '#3265b0' };
+export const PALETTE: Record<string, string> = { r: '#d43b21', s: '#ffb66b', b: '#793b20', k: '#211b15', w: '#fff1d2', g: '#73ad12', G: '#286b0b', y: '#ffc437', o: '#e88325', c: '#70c9e8', B: '#3265b0', h: '#d43b21', a: '#793b20', f: '#793b20', p: '#ed789e', P: '#b93665' };
 export const SPRITES: Record<string, string[]> = {
+    toad: [
+        '.....wwwwww.....', '...wwwrrwwwww...', '..wwwwrrwwrrww..', '.wrrwwwwwwrrwww.', '.wrrwwrrwwwwwww.', '.wwwwwrrwwwwwww.', '..wwwwwwwwwwww..', '....ssksksss....', '....ssssssss....', '.....ssssss.....', '...BBswwwwsBB...', '..sBBswwwwsBBs..', '..ssswwwwwwsss..', '....wwwwwwww....', '....www..www....', '...bbbb..bbbb...'
+    ],
+    peach: [
+        '.....y..y..y....', '.....yyyyyyy....', '.....yoyoyyy....', '....yyyyyyyy....', '...yyyyssssyy...', '...yyyssksyyy...', '...yyyssssyyy...', '...yyyssskyyy...', '....yyyssyyyy...', '....yyyssyyy....', '.....pppppp.....', '....pppccppp....', '...ssppccppss...', '...ssppppppss...', '...ssppppppss...', '....ssppppss....', '.....wwwwww.....', '.....pppppp.....', '....pppPPppp....', '....pppPPppp....', '...ppppPPpppp...', '...ppppPPpppp...', '..pppppPPppppp..', '..pppppPPppppp..', '.ppppppPPpppppp.', '.wwwwwwwwwwwwww.', '.wwwwwwwwwwwwww.', '....fff..fff....'
+    ],
     mario: [
         '.....rrrrrr.....', '....rrrrrrrrr...', '....bbbssks.....', '...bsbsssksss...', '...bsbbsssksbs..', '....bsssskkkk...', '.....ssssss.....', '....rrbrrbrr....', '...rrrbrrbrrr...', '..rrrrbbbbrrrr..', '..ssrbybbybrss..', '..sssbbbbbbsss..', '....bbbbbbbb....', '....bbb..bbb....', '...bbb....bbb...', '..bbbb....bbbb..'
     ],
@@ -45,12 +51,28 @@ export const SPRITES: Record<string, string[]> = {
     axe: ['......kkkk......', '.....kwwwwk.....', '....kwwwwwwk....', '....kwwwwwwk....', '.....kwwwwk.....', '......kbbk......', '.......bb.......', '.......bb.......', '.......bb.......', '.......bb.......', '.......bb.......', '.......bb.......', '.......bb.......', '.......bb.......', '................', '................']
 };
 for (const name of ['mario', 'marioBig']) {
+    // Separate hat, hair and shoes from clothing without duplicating character grids.
+    SPRITES[name] = SPRITES[name].map((row, y, grid) => y < 2 ? row.replaceAll('r', 'h') : y < 7 ? row.replaceAll('b', 'a') : y >= grid.length - 2 ? row.replaceAll('b', 'f') : row);
     const swim = [...SPRITES[name]], climb = [...SPRITES[name]];
     const arm = name === 'mario' ? 8 : 12;
     swim[arm] = 'ssssrrbbbbrr....'; swim[arm + 1] = '.sssrrbbbbrr....';
     swim[swim.length - 2] = '....bbbbbbbb....'; swim[swim.length - 1] = '........bbbbbb..';
     climb[arm] = '..ssrrbbbbrrss..'; climb[arm + 1] = '..ssrrbbbbrrss..';
     SPRITES[name + 'Swim'] = swim; SPRITES[name + 'Climb'] = climb;
+    const throwing = [...SPRITES[name]], celebrating = [...SPRITES[name]];
+    throwing[arm] = '...rrrbbbbrrssss'; throwing[arm + 1] = '...rrrbbbbrrssss';
+    celebrating[arm - 2] = 'ss' + celebrating[arm - 2].slice(2, 14) + 'ss';
+    celebrating[arm - 1] = 'ss' + celebrating[arm - 1].slice(2, 14) + 'ss';
+    celebrating[arm] = '.rrr' + celebrating[arm].slice(4, 12) + 'rrr.';
+    SPRITES[name + 'Throw'] = throwing; SPRITES[name + 'Celebrate'] = celebrating;
+}
+SPRITES.marioCrouch = [...SPRITES.marioBig.slice(0, 7), ...SPRITES.marioBig.slice(12, 17), ...SPRITES.marioBig.slice(-4)];
+for (const name of ['toad', 'peach']) {
+    const pose = [...SPRITES[name]], arm = name === 'toad' ? 10 : 12;
+    pose[arm - 2] = 'ss' + pose[arm - 2].slice(2, 14) + 'ss';
+    pose[arm - 1] = '.ss' + pose[arm - 1].slice(3, 13) + 'ss.';
+    pose[arm] = '..ss' + pose[arm].slice(4, 12) + 'ss..';
+    SPRITES[name + 'Celebrate'] = pose;
 }
 const GLYPHS: Record<string, string> = {
     A: '01110100011000111111100011000110001', B: '11110100011000111110100011000111110', C: '01111100001000010000100001000001111', D: '11110100011000110001100011000111110', E: '11111100001000011110100001000011111', F: '11111100001000011110100001000010000', G: '01111100001000010111100011000101111', H: '10001100011000111111100011000110001', I: '11111001000010000100001000010011111', J: '00111000100001000010000101001001100', K: '10001100101010011000101001001010001', L: '10000100001000010000100001000011111', M: '10001110111010110101100011000110001', N: '10001110011010110011100011000110001', O: '01110100011000110001100011000101110', P: '11110100011000111110100001000010000', Q: '01110100011000110001101011001001101', R: '11110100011000111110101001001010001', S: '01111100001000001110000010000111110', T: '11111001000010000100001000010000100', U: '10001100011000110001100011000101110', V: '10001100011000110001100010101000100', W: '10001100011000110101101011101110001', X: '10001100010101000100010101000110001', Y: '10001100010101000100001000010000100', Z: '11111000010001000100010001000011111',

@@ -10,3 +10,8 @@
 .debug-levels select { padding: 8px; max-width: 100%; background: #171b22; color: #fff1df; }
 .course strong { overflow-wrap: anywhere; }
 @media (max-width: 560px) { .game-actions { flex-wrap: wrap; } .touch-controls > div { gap: 4px; } .touch-controls button { min-width: 38px; } }
+.character-select { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 16px 0; font: 10px monospace; letter-spacing: 1px; color: #b1b4bd; }
+.character-select[hidden] { display: none; }
+.character-select button { background: #181b20; border: 1px solid #41464d; color: #fff1df; padding: 8px 12px; font: inherit; cursor: pointer; }
+.character-select button[aria-pressed="true"] { border-color: #ffca68; color: #ffca68; }
+.character-select button[aria-pressed="true"]::before { content: '> '; }

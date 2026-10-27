@@ -14,6 +14,10 @@ export interface EnemySpawn {
     y: number;
 }
 export type LevelId = `${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}-${1 | 2 | 3 | 4}`;
+export type CastleEndingConfig = {
+    x: number;
+    floorY: number;
+} & ({ character: 'toad'; nextLevel: LevelId } | { character: 'peach'; nextLevel?: never });
 export interface VineDef { x: number; bottom: number; top: number; target: string; spawnX: number; spawnY: number; }
 export interface MazeGate { x: number; minY: number; maxY: number; returnX: number; returnY: number; }
 export interface PlatformDef {
@@ -48,6 +52,7 @@ export interface LevelDefinition {
     cannons?: { x: number; y: number; period: number }[];
     bridge?: { start: number; end: number; row: number };
     bowser?: { firePeriod: number; jumpPeriod: number; hammers: boolean };
+    ending?: CastleEndingConfig;
     name: string;
     theme: Theme;
     width: number;

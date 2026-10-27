@@ -4,6 +4,7 @@ import { Game, GameState } from './core/Game';
 import { Input, type Action } from './core/Input';
 import { GameLoop } from './core/GameLoop';
 import { Renderer } from './graphics/Renderer';
+import type { CharacterId } from './entities/Character';
 const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
  <header class="masthead"><a class="brand" href="" aria-label="8-bit arcade home"><span class="brand-mark" aria-hidden="true">▟</span> THE 8-BIT ARCADE<span class="brand-dot"></span></a><span class="edition">CARTRIDGE NO. 001 <span> / </span> EST. 1985</span></header>
@@ -11,7 +12,8 @@ app.innerHTML = `
   <div class="heading"><div><div class="eyebrow"><span></span> A CLASSIC. ONE MORE TIME.</div><h1>Super Mario Bros<span>.</span></h1><p>Same little plumber. Same big adventure.</p></div><div class="game-tag"><span>1 PLAYER</span><span>32 COURSES</span><span>∞ RETRIES</span></div></div>
   <section class="arcade" aria-label="Super Mario Bros. game">
    <div class="cabinet-top"><div><span class="power-light"></span> <span id="status">READY TO PLAY</span></div><span>256 × 240 <span class="dim">/</span> 60 FPS</span></div>
-   <div class="screen-surround" id="fullscreen-area"><canvas id="game" width="256" height="240" tabindex="0" aria-label="Super Mario Bros. Use arrow keys to move, Space to jump, Shift to run, and Enter to start or pause."></canvas></div>
+   <div class="screen-surround" id="fullscreen-area"><canvas id="game" width="256" height="240" tabindex="0" aria-label="Super Mario Bros. Select Mario or Luigi with Up/W and Down/S, then Enter to start. Arrow keys move, Space jumps, Shift runs, Enter pauses or continues dialogue."></canvas></div>
+   <div id="character-select" class="character-select" role="group" aria-label="Select player"><span>SELECT PLAYER</span><button type="button" data-character="mario" aria-pressed="true">MARIO</button><button type="button" data-character="luigi" aria-pressed="false">LUIGI</button><span>↑ ↓ / W S</span></div>
    <div class="cabinet-bottom"><div class="game-actions"><button id="start" class="primary"><span aria-hidden="true">▶</span> <span id="start-label">START GAME</span><kbd>ENTER</kbd></button><button id="title" type="button" hidden>RETURN TO TITLE</button><button id="restart" class="restart-level" type="button" title="Restart this level (costs one life)" aria-label="Restart level (costs one life)" disabled>↻ RESTART LEVEL</button></div><div class="tools"><button id="sound" aria-label="Mute sound" aria-pressed="false"><span class="sound-icon">♫</span><span id="sound-label">SOUND ON</span></button><span class="separator"></span><button id="fullscreen" aria-label="Enter fullscreen"><span class="fullscreen-icon">⛶</span><span>FULLSCREEN</span></button></div></div>
   </section>
   <div class="touch-controls" aria-label="Touch controls"><div><button data-action="up" aria-label="Climb vine">▲</button><button data-action="left" aria-label="Move left">◀</button><button data-action="down" aria-label="Crouch or enter pipe">▼</button><button data-action="right" aria-label="Move right">▶</button></div><div><button data-action="run" class="touch-run">B<span>RUN</span></button><button data-action="jump" class="touch-jump">A<span>JUMP</span></button></div></div>
@@ -38,8 +40,16 @@ restart.addEventListener('click', () => {
     game.restart();
     activate();
 });
-canvas.addEventListener('pointerdown', () => { activate(); if (game.state === GameState.TITLE) {
-    game.begin();
+const characterSelect = document.querySelector<HTMLElement>('#character-select')!;
+for (const button of characterSelect.querySelectorAll<HTMLButtonElement>('[data-character]')) {
+    button.addEventListener('click', () => { game.selectCharacter(button.dataset.character as CharacterId); activate(); });
+}
+canvas.addEventListener('pointerdown', event => { activate(); if (game.state === GameState.TITLE) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * 256 / rect.width, y = (event.clientY - rect.top) * 240 / rect.height;
+    if (x >= 96 && x <= 178 && y >= 162 && y < 178) game.selectCharacter('mario');
+    else if (x >= 96 && x <= 178 && y >= 178 && y < 193) game.selectCharacter('luigi');
+    else if (x >= 60 && x <= 196 && y >= 194 && y <= 207) game.begin();
 } });
 window.addEventListener('keydown', () => game.audio.unlock(), { once: true });
 sound.addEventListener('click', () => { activate(); game.audio.muted = !game.audio.muted; soundUI(); try {
@@ -72,13 +82,17 @@ function frame(now: number) {
     loop.advance(now - previous, () => game.update());
     previous = now;
     renderer.draw(game);
-    if (game.state !== oldState) {
-        oldState = game.state;
-        status.textContent = game.state === GameState.TITLE ? 'READY TO PLAY' : game.state === GameState.PLAYING ? `WORLD ${game.world} · ${game.lives} LIVES` : game.state.replaceAll('_', ' ');
-        startLabel.textContent = game.state === GameState.PLAYING ? 'PAUSE GAME' : game.state === GameState.PAUSED ? 'RESUME GAME' : [GameState.GAME_OVER, GameState.VICTORY].includes(game.state) ? 'PLAY AGAIN' : 'START GAME';
+    const uiState = `${game.state}:${game.castlePhase}:${game.selectedCharacter}`;
+    if (uiState !== oldState) {
+        oldState = uiState;
+        const dialogue = game.state === GameState.LEVEL_COMPLETE && game.castlePhase === 'dialogue';
+        status.textContent = game.state === GameState.TITLE ? `${game.character.displayName} · READY TO PLAY` : dialogue ? `${game.level.ending?.character === 'peach' ? 'PRINCESS PEACH' : 'TOAD'} RESCUED` : game.state === GameState.PLAYING ? `WORLD ${game.world} · ${game.lives} LIVES` : game.state.replaceAll('_', ' ');
+        startLabel.textContent = dialogue ? 'CONTINUE' : game.state === GameState.PLAYING ? 'PAUSE GAME' : game.state === GameState.PAUSED ? 'RESUME GAME' : [GameState.GAME_OVER, GameState.VICTORY].includes(game.state) ? 'PLAY AGAIN' : 'START GAME';
         restart.disabled = game.state !== GameState.PLAYING && game.state !== GameState.PAUSED;
-        start.disabled = [GameState.LEVEL_INTRO, GameState.LEVEL_COMPLETE, GameState.PLAYER_DYING, GameState.PIPE].includes(game.state);
-        title.hidden = game.state !== GameState.VICTORY;
+        start.disabled = !dialogue && [GameState.LEVEL_INTRO, GameState.LEVEL_COMPLETE, GameState.PLAYER_DYING, GameState.PIPE].includes(game.state);
+        title.hidden = ![GameState.VICTORY, GameState.GAME_OVER, GameState.PAUSED].includes(game.state);
+        characterSelect.hidden = game.state !== GameState.TITLE;
+        for (const button of characterSelect.querySelectorAll('[data-character]')) button.setAttribute('aria-pressed', String(button.getAttribute('data-character') === game.selectedCharacter));
         const world = game.world.split('-')[0];
         document.querySelector('#journey-world')!.textContent = `WORLD ${world.padStart(2, '0')}`;
         document.querySelector('#courses')!.innerHTML = PROGRESSION.filter(id => id.startsWith(world + '-')).map(id => {
