@@ -133,6 +133,23 @@ test('vine attachment allows descent and jump detachment without altering land p
     g.input.set('up','up',false);g.input.set('down','down',true);const y=g.player.y;ticks(g,3);assert.ok(g.player.y>y);
     g.input.set('down','down',false);g.input.set('jump','jump',true);ticks(g);assert.equal(g.player.climbing,null);assert.ok(g.player.vy<0);
 });
+for (const character of ['mario', 'luigi']) for (const power of [0, 1, 2]) {
+    test(`${character} with power ${power} can climb the 4-2 vine while standing on its block`, () => {
+        const g = new Game(); g.selectCharacter(character); g.load('4-2'); g.change(GameState.PLAYING);
+        const vine = g.level.vines[0];
+        g.hitBlock(44, 4, g.level.tiles['44,4']);
+        g.player.setPower(power); g.player.x = vine.x - g.player.w / 2; g.player.y = vine.bottom - g.player.h;
+        g.player.grounded = true; g.camera = 600;
+        ticks(g, 32); assert.equal(g.vines[0], vine.bottom - vine.top);
+        assert.equal(g.player.y + g.player.h, vine.bottom);
+        g.input.set('up', 'up', true); ticks(g);
+        assert.equal(g.player.climbing, 0); assert.equal(g.player.vy, 0);
+        for (let i = 0; i < 40 && g.level.id === '4-2'; i++) ticks(g);
+        assert.equal(g.level.id, '4-2-sky'); assert.equal(g.state, GameState.LEVEL_INTRO);
+        assert.equal(g.player.power, power); assert.equal(g.selectedCharacter, character);
+        assert.ok(!blocked(g.level, g.player));
+    });
+}
 test('balance lifts move oppositely and falling platforms carry their passenger',()=>{
     for(const kind of ['balance','falling']){
         const g=playing('3-3');const platform=g.platforms.find(p=>p.kind===kind);g.player.x=platform.x+8;g.player.y=platform.y-16;g.player.grounded=true;g.camera=Math.max(0,g.player.x-104);const y=platform.y;

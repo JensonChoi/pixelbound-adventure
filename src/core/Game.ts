@@ -527,8 +527,11 @@ export class Game {
     } this.projectiles = this.projectiles.filter(f => f.life > 0 && f.y < 260 && f.x > this.camera - 32 && f.x < this.camera + 288); }
     private climbStep(): boolean {
         const p = this.player;
+        // Measure the grab point from the feet so growing cannot move it out of reach.
+        const grabY = p.y + p.h - 16;
         for (const [i, vine] of (this.level.vines ?? []).entries()) {
-            if (p.climbing === null && p.y > vine.top + 8 && this.vines[i] > 0 && this.input.down('up') && Math.abs(p.x + p.w / 2 - vine.x) < 14 && p.y + p.h >= vine.bottom - this.vines[i] && p.y < vine.bottom) p.climbing = i;
+            const touching = Math.abs(p.x + p.w / 2 - vine.x) < 14 && p.y + p.h >= vine.bottom - this.vines[i] && p.y < vine.bottom;
+            if (p.climbing === null && grabY > vine.top + 8 && this.vines[i] > 0 && this.input.down('up') && touching) p.climbing = i;
         }
         if (p.climbing === null) return false;
         const vine = this.level.vines![p.climbing];
