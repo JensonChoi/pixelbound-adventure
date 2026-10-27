@@ -3,3 +3,10 @@
 .cabinet-bottom .restart-level{border:1px solid #596046;border-radius:3px;background:#24271f;color:#d4b182;font:10px monospace;letter-spacing:.4px;padding:11px 10px}.cabinet-bottom .restart-level:hover:enabled{background:#333a29;border-color:#d4b182}.control-list{flex-wrap:wrap}
 
 .game-actions{display:flex;align-items:center;gap:10px}.cabinet-bottom{flex-wrap:wrap}@media(max-width:600px){.cabinet-bottom .tools{flex-basis:100%;justify-content:flex-end}.game-actions{gap:8px}}
+
+[hidden] { display: none !important; }
+.debug-levels { margin: 24px 0; padding: 12px; border: 1px dashed #b99256; color: #d9c3a3; }
+.debug-levels label { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+.debug-levels select { padding: 8px; max-width: 100%; background: #171b22; color: #fff1df; }
+.course strong { overflow-wrap: anywhere; }
+@media (max-width: 560px) { .game-actions { flex-wrap: wrap; } .touch-controls > div { gap: 4px; } .touch-controls button { min-width: 38px; } }

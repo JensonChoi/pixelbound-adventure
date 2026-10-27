@@ -1,8 +1,9 @@
+import { createEnemy, specialEnemy } from './Enemies';
 import { AudioManager } from './Audio';
 import { Input } from './Input';
-import { blocked, move, PHYSICS, solid } from './Physics';
+import { blocked, move, PHYSICS, WATER_PHYSICS, solid } from './Physics';
 import { Player, body, overlaps, type Enemy, type MovingPlatform, type Particle, type Pickup, type Projectile } from '../entities/Entity';
-import { cloneLevel, key, tileAt, type LevelDefinition, type Tile } from '../world/Level';
+import { cloneLevel, key, tileAt, type LevelDefinition, type Tile, type PipeLink } from '../world/Level';
 import { LEVELS, PROGRESSION } from '../world/levels';
 const STARTING_LIVES = 5;
 
@@ -22,6 +23,8 @@ interface Snapshot {
     enemies: Enemy[];
     pickups: Pickup[];
     platforms: MovingPlatform[];
+    vines: number[];
+    mazePassed: number[];
 }
 export class Game {
     state = GameState.TITLE;
@@ -36,6 +39,9 @@ export class Game {
     coins = 0;
     lives = STARTING_LIVES;
     levelIndex = 0;
+    highestWorldReached = 1;
+    vines: number[] = [];
+    mazePassed: number[] = [];
     time = 400;
     camera = 0;
     frame = 0;
@@ -43,21 +49,24 @@ export class Game {
     best = 0;
     completed: string[] = [];
     private saved = new Map<string, Snapshot>();
-    private pipeTarget: {
-        target: string;
-        spawnX: number;
-        spawnY: number;
-    } | null = null;
+    private pipeTarget: PipeLink | null = null;
     private pipeExit = false;
     private flagStage = 0;
     constructor(public input = new Input(), public audio = new AudioManager()) { this.load('1-1'); this.state = GameState.TITLE; }
     get world() { return PROGRESSION[this.levelIndex]; }
     get progress() { return Math.min(1, (this.player.x / Math.min(this.level.goal, this.level.width))); }
     load(id: string, restore = false) {
+        if (!LEVELS[id]) return false;
+        const owner = LEVELS[id].stageId ?? (id === 'bonus' ? '1-1' : id.slice(0, 3));
+        const index = PROGRESSION.indexOf(owner);
+        if (index >= 0) this.levelIndex = index;
+        this.highestWorldReached = Math.max(this.highestWorldReached, Number(this.world[0]));
         const saved = restore ? this.saved.get(id) : undefined;
         this.level = saved?.level ?? cloneLevel(LEVELS[id]);
-        this.enemies = saved?.enemies ?? this.level.enemies.map(e => ({ ...body(e.x, e.y, e.kind === 'bowser' ? 28 : 12, e.kind === 'bowser' ? 32 : e.kind === 'plant' ? 24 : 16), kind: e.kind, homeX: e.x, homeY: e.y, phase: 0, shell: false, dead: 0, active: false, health: 5, safe: 0, vx: e.kind === 'bowser' ? -.6 : -.5 }));
+        this.enemies = saved?.enemies ?? this.level.enemies.map(createEnemy);
         this.pickups = saved?.pickups ?? [];
+        this.vines = saved?.vines ?? (this.level.vines ?? []).map(() => 0);
+        this.mazePassed = saved?.mazePassed ?? [];
         this.platforms = saved?.platforms ?? this.level.platforms.map(p => ({ ...p, originX: p.x, originY: p.y, phase: 0, dx: 0, dy: 0 }));
         this.projectiles = [];
         this.particles = [];
@@ -67,8 +76,10 @@ export class Game {
         this.player.y = this.level.spawn.y;
         this.player.setPower(power);
         this.camera = 0;
+        this.player.swimming = this.level.theme === 'underwater';
+        return true;
     }
-    begin() { this.score = 0; this.coins = 0; this.lives = STARTING_LIVES; this.levelIndex = 0; this.completed = []; this.saved.clear(); this.player = new Player(); this.time = 400; this.load('1-1'); this.change(GameState.LEVEL_INTRO); }
+    begin() { this.score = 0; this.coins = 0; this.lives = STARTING_LIVES; this.levelIndex = 0; this.highestWorldReached = 1; this.pipeTarget = null; this.input.clear(); this.completed = []; this.saved.clear(); this.player = new Player(); this.time = 400; this.load('1-1'); this.change(GameState.LEVEL_INTRO); }
     change(state: GameState) { this.state = state; this.stateTicks = 0; }
     pause() { if (this.state === GameState.PLAYING)
         this.change(GameState.PAUSED); }
@@ -95,7 +106,11 @@ export class Game {
             const item = t.item;
             t.kind = 'used';
             delete t.item;
-            if (item === 'coin') {
+            if (item === 'vine') {
+                const index = this.level.vines?.findIndex(v => Math.abs(v.x - (x * 16 + 8)) < 1) ?? -1;
+                if (index >= 0) this.vines[index] = 1;
+            }
+            else if (item === 'coin') {
                 this.coin(x * 16, y * 16 - 8);
                 this.particles.push({ x: x * 16 + 6, y: y * 16 - 10, vx: 0, vy: -2, life: 24, color: '#ffce54' });
             }
@@ -131,7 +146,7 @@ export class Game {
     private respawn() { if (this.lives <= 0) {
         this.change(GameState.GAME_OVER);
         return;
-    } this.saved.clear(); this.player = new Player(); this.load(this.world); this.time = this.level.time; this.change(GameState.LEVEL_INTRO); }
+    } this.saved.clear(); this.pipeTarget = null; this.input.clear(); this.player = new Player(); this.load(this.world); this.time = this.level.time; this.change(GameState.LEVEL_INTRO); }
     defeat(e: Enemy, points = 100) { if (e.dead)
         return; e.dead = 30; e.vx = 0; this.addScore(points, e.x, e.y); }
     private finish() { if (this.state !== GameState.PLAYING)
@@ -196,10 +211,21 @@ export class Game {
             p.star--;
         if (p.fireCooldown > 0)
             p.fireCooldown--;
+        for (let i = 0; i < this.vines.length; i++) if (this.vines[i] > 0) this.vines[i] = Math.min(this.level.vines![i].bottom - this.level.vines![i].top, this.vines[i] + 1);
         for (const platform of this.platforms) {
             const oldX = platform.x, oldY = platform.y;
-            platform.phase += platform.speed;
-            platform[platform.axis] = platform[platform.axis === 'x' ? 'originX' : 'originY'] + Math.sin(platform.phase) * platform.range;
+            const riding = p.grounded && Math.abs(p.y + p.h - oldY) < 2 && p.x + p.w > oldX && p.x < oldX + platform.width;
+            if (platform.kind === 'falling') {
+                if (riding || platform.fallSpeed) platform.fallSpeed = Math.min(3, (platform.fallSpeed ?? 0) + .035);
+                platform.y += platform.fallSpeed ?? 0;
+            } else if (platform.kind === 'balance') {
+                const partner = this.platforms.find(other => other !== platform && other.pair === platform.pair);
+                const otherRiding = partner && p.grounded && Math.abs(p.y + p.h - partner.y) < 3 && p.x + p.w > partner.x && p.x < partner.x + partner.width;
+                platform.y = Math.max(platform.originY - platform.range, Math.min(platform.originY + platform.range, platform.y + (riding ? .45 : otherRiding ? -.45 : 0)));
+            } else {
+                platform.phase += platform.speed;
+                platform[platform.axis] = platform[platform.axis === 'x' ? 'originX' : 'originY'] + Math.sin(platform.phase) * platform.range;
+            }
             platform.dx = platform.x - oldX;
             platform.dy = platform.y - oldY;
             if (p.grounded && Math.abs(p.y + p.h - oldY) < 2 && p.x + p.w > oldX && p.x < oldX + platform.width) {
@@ -207,8 +233,12 @@ export class Game {
                 p.y += platform.dy;
             }
         }
+        const oldX = p.x;
+        if (this.climbStep()) { this.updateEnemies(p.y + p.h); return; }
+        const swimming = this.level.theme === 'underwater';
+        p.swimming = swimming;
         const down = this.input.down('down');
-        if (p.big) {
+        if (p.big && !swimming) {
             const bottom = p.y + p.h;
             if (down && p.grounded && !p.crouched) {
                 p.h = 16;
@@ -222,11 +252,11 @@ export class Game {
             }
         }
         const direction = (this.input.down('right') ? 1 : 0) - (this.input.down('left') ? 1 : 0);
-        const accel = p.grounded ? PHYSICS.groundAcceleration : PHYSICS.airAcceleration;
+        const accel = swimming ? WATER_PHYSICS.acceleration : p.grounded ? PHYSICS.groundAcceleration : PHYSICS.airAcceleration;
         p.skidding = direction !== 0 && Math.sign(p.vx) !== direction && Math.abs(p.vx) > 1 && p.grounded;
         if (direction && !p.crouched) {
             p.facing = direction;
-            const max = this.input.down('run') ? PHYSICS.run : PHYSICS.walk;
+            const max = swimming ? WATER_PHYSICS.speed : this.input.down('run') ? PHYSICS.run : PHYSICS.walk;
             if (p.vx * direction < max) {
                 p.vx += direction * (p.skidding ? accel * 1.8 : accel);
                 if (p.vx * direction > max)
@@ -236,14 +266,14 @@ export class Game {
                 p.vx -= Math.sign(p.vx) * Math.min(.04, Math.abs(p.vx) - max);
             p.vx = Math.max(-PHYSICS.run, Math.min(PHYSICS.run, p.vx));
         }
-        else if (p.grounded)
-            p.vx = Math.sign(p.vx) * Math.max(0, Math.abs(p.vx) - PHYSICS.friction);
-        if (this.input.tap('jump') && p.grounded) {
-            p.vy = -(Math.abs(p.vx) > 2 ? PHYSICS.runJump : PHYSICS.jump);
+        else if (p.grounded || swimming)
+            p.vx = Math.sign(p.vx) * Math.max(0, Math.abs(p.vx) - (swimming ? WATER_PHYSICS.friction : PHYSICS.friction));
+        if (this.input.tap('jump') && (p.grounded || swimming)) {
+            p.vy = swimming ? -WATER_PHYSICS.swim : -(Math.abs(p.vx) > 2 ? PHYSICS.runJump : PHYSICS.jump);
             p.grounded = false;
             this.audio.play('jump');
         }
-        p.vy = Math.min(PHYSICS.maxFall, p.vy + (p.vy < 0 && this.input.down('jump') ? PHYSICS.heldGravity : PHYSICS.gravity));
+        p.vy = swimming ? Math.min(WATER_PHYSICS.maxFall, p.vy + WATER_PHYSICS.gravity) : Math.min(PHYSICS.maxFall, p.vy + (p.vy < 0 && this.input.down('jump') ? PHYSICS.heldGravity : PHYSICS.gravity));
         const oldBottom = p.y + p.h;
         move(p, this.level, (x, y, t) => this.hitBlock(x, y, t));
         for (const platform of this.platforms)
@@ -252,6 +282,7 @@ export class Game {
                 p.vy = 0;
                 p.grounded = true;
             }
+        if (swimming && p.y < 40) { p.y = 40; p.vy = Math.max(0, p.vy); }
         p.x = Math.max(this.camera, Math.min(this.level.width - p.w, p.x));
         p.walk += Math.abs(p.vx) * .15;
         if (this.input.tap('run') && p.power === 2 && p.fireCooldown === 0 && this.projectiles.filter(f => !f.hostile).length < 2) {
@@ -259,14 +290,19 @@ export class Game {
             p.fireCooldown = 15;
             this.audio.play('fire');
         }
-        this.camera = Math.max(this.camera, Math.min(this.level.width - 256, p.x - 104));
-        if (p.y > 248) {
+        const chamber = this.level.warpZones?.find(zone => p.y > 80 && zone.pipeIds.some(id => {
+            const pipe = this.level.pipes.find(link => link.id === id);
+            return pipe && p.x >= pipe.x - 16 && p.x <= pipe.x + 224;
+        }));
+        const cameraTarget = Math.min(this.level.width - 256, p.x - (chamber ? 32 : 104));
+        this.camera = Math.max(this.camera, chamber ? Math.min(cameraTarget, this.camera + 8) : cameraTarget);
+        if (p.y > 248 || this.level.lava?.some(lava => p.x + p.w > lava.x && p.x < lava.x + lava.width && p.y + p.h > lava.y)) {
             this.die();
             return;
         }
         for (const link of this.level.pipes)
-            if (down && p.grounded && Math.abs(p.x + p.w / 2 - (link.x + 16)) < 12 && Math.abs(p.y + p.h - link.y) < 2) {
-                this.saved.set(this.level.id, { level: this.level, enemies: this.enemies, pickups: this.pickups, platforms: this.platforms });
+            if (LEVELS[link.target] && down && p.grounded && Math.abs(p.x + p.w / 2 - (link.x + 16)) < 12 && Math.abs(p.y + p.h - link.y) < 2) {
+                this.saved.set(this.level.id, { level: this.level, enemies: this.enemies, pickups: this.pickups, platforms: this.platforms, vines: this.vines, mazePassed: this.mazePassed });
                 this.pipeTarget = link;
                 this.pipeExit = false;
                 p.x = link.x + 10;
@@ -274,6 +310,19 @@ export class Game {
                 this.audio.play('emerge');
                 return;
             }
+        for (const [i, gate] of (this.level.mazes ?? []).entries()) {
+            if (!this.mazePassed.includes(i) && oldX < gate.x && p.x + p.w >= gate.x) {
+                const feet = p.y + p.h;
+                if (feet >= gate.minY && feet <= gate.maxY) this.mazePassed.push(i);
+                else { p.x = gate.returnX; p.y = gate.returnY; p.vx = 0; p.vy = 0; this.camera = Math.max(0, p.x - 104); }
+            }
+        }
+        for (const cannon of this.level.cannons ?? []) {
+            if (this.frame % cannon.period === 0 && Math.abs(p.x - cannon.x) > 40 && Math.abs(p.x - cannon.x) < 280) {
+                const bill = createEnemy({ kind: 'bullet', x: cannon.x, y: cannon.y });
+                bill.vx = p.x < cannon.x ? -1.7 : 1.7; this.enemies.push(bill);
+            }
+        }
         this.updateEnemies(oldBottom);
         if (this.state !== GameState.PLAYING)
             return;
@@ -285,7 +334,7 @@ export class Game {
         } return true; });
         for (const bar of this.level.firebars)
             for (let i = 1; i <= bar.length; i++) {
-                const a = this.frame * .035;
+                const a = this.frame * (bar.speed ?? .035) + (bar.angle ?? 0);
                 const x = bar.x + Math.cos(a) * i * 8, y = bar.y + Math.sin(a) * i * 8;
                 if (overlaps(p, { x: x - 3, y: y - 3, w: 6, h: 6 }))
                     this.damage();
@@ -302,7 +351,7 @@ export class Game {
                     e.y = 400;
                 continue;
             }
-            if (e.y > 280)
+            if (e.y > 280 && e.kind !== 'podoboo' && e.kind !== 'leapingCheep')
                 continue;
             if (e.x < this.camera - 64 || e.x > this.camera + 288)
                 continue;
@@ -310,7 +359,8 @@ export class Game {
             e.phase++;
             if (e.safe > 0)
                 e.safe--;
-            if (e.kind === 'plant') {
+            if (specialEnemy(this, e)) { /* Behavior handled by the shared enemy system. */ }
+            else if (e.kind === 'plant') {
                 const cycle = e.phase % 220;
                 const near = Math.abs(p.x - e.homeX) < 28;
                 if (cycle === 80 && near)
@@ -321,11 +371,11 @@ export class Game {
             }
             else if (e.kind === 'bowser') {
                 e.vx = Math.sin(e.phase * .025) * .7;
-                if (e.grounded && e.phase % 120 === 0)
+                if (e.grounded && e.phase % (this.level.bowser?.jumpPeriod ?? 120) === 0)
                     e.vy = -3.6;
                 e.vy = Math.min(4, e.vy + .16);
                 move(e, this.level);
-                if (e.phase % 100 === 0)
+                if (e.phase % (this.level.bowser?.firePeriod ?? 100) === 0)
                     this.projectiles.push({ ...body(e.x, e.y + 9, 12, 6), vx: -1.8, vy: 0, life: 240, hostile: true });
             }
             else {
@@ -337,22 +387,23 @@ export class Game {
                 if (hit.wall)
                     e.vx = -vx;
             }
+            if (e.kind === 'bowser' && this.level.bowser?.hammers && e.phase % 130 === 0) this.projectiles.push({ ...body(e.x, e.y, 8, 10), vx: -1.5, vy: -3.6, life: 120, hostile: true, kind: 'hammer' });
             if (e.shell && Math.abs(e.vx) > 1)
                 for (const other of this.enemies)
-                    if (other !== e && !other.dead && other.kind !== 'plant' && overlaps(e, other))
+                    if (other !== e && !other.dead && other.kind !== 'plant' && other.kind !== 'podoboo' && overlaps(e, other))
                         this.defeat(other, 200);
             if (!overlaps(p, e) || e.safe > 0)
                 continue;
-            if (p.star) {
+            if (p.star && e.kind !== 'podoboo') {
                 this.defeat(e, 200);
                 continue;
             }
-            const stomp = p.vy >= 0 && oldBottom <= e.y + 7 && e.kind !== 'plant' && e.kind !== 'bowser';
+            const stomp = p.vy >= 0 && oldBottom <= e.y + 7 && !['plant', 'bowser', 'spiny', 'egg', 'podoboo', 'blooper'].includes(e.kind) && !p.swimming;
             if (stomp) {
                 p.y = e.y - p.h;
                 p.vy = this.input.down('jump') ? -4 : -2.8;
                 this.audio.play('stomp');
-                if (e.kind === 'goomba')
+                if (!['green', 'red', 'buzzy'].includes(e.kind))
                     this.defeat(e);
                 else if (!e.shell) {
                     e.shell = true;
@@ -372,7 +423,7 @@ export class Game {
             else
                 this.damage();
         }
-        this.enemies = this.enemies.filter(e => e.y < 320);
+        this.enemies = this.enemies.filter(e => (e.y < 320 || e.kind === 'podoboo' || e.kind === 'leapingCheep') && (e.kind !== 'bullet' || e.x > this.camera - 64 && e.x < this.camera + 400));
     }
     private kick(e: Enemy) { e.vx = this.player.x < e.x ? 3.5 : -3.5; e.safe = 15; this.audio.play('kick'); }
     private updatePickups() {
@@ -420,6 +471,7 @@ export class Game {
         f.life--;
         if (f.hostile) {
             f.x += f.vx;
+            if (f.kind === 'hammer') { f.vy += .12; f.y += f.vy; }
             if (overlaps(this.player, f)) {
                 this.damage();
                 f.life = 0;
@@ -439,17 +491,48 @@ export class Game {
                         if (--e.health <= 0)
                             this.defeat(e, 5000);
                     }
-                    else
+                    else if (e.kind !== 'buzzy' && e.kind !== 'podoboo')
                         this.defeat(e, 200);
                     break;
                 }
         }
     } this.projectiles = this.projectiles.filter(f => f.life > 0 && f.y < 260 && f.x > this.camera - 32 && f.x < this.camera + 288); }
+    private climbStep(): boolean {
+        const p = this.player;
+        for (const [i, vine] of (this.level.vines ?? []).entries()) {
+            if (p.climbing === null && p.y > vine.top + 8 && this.vines[i] > 0 && this.input.down('up') && Math.abs(p.x + p.w / 2 - vine.x) < 14 && p.y + p.h >= vine.bottom - this.vines[i] && p.y < vine.bottom) p.climbing = i;
+        }
+        if (p.climbing === null) return false;
+        const vine = this.level.vines![p.climbing];
+        if (this.input.tap('jump')) { p.climbing = null; p.vy = -PHYSICS.jump; return false; }
+        p.x = vine.x - p.w / 2; p.vx = 0; p.vy = 0; p.grounded = false;
+        p.y += (this.input.down('down') ? 1 : 0) - (this.input.down('up') ? 1 : 0);
+        if (p.y >= vine.bottom) { p.climbing = null; return false; }
+        if (p.y <= vine.top && this.vines[p.climbing] >= vine.bottom - vine.top && LEVELS[vine.target]) {
+            this.saved.set(this.level.id, { level: this.level, enemies: this.enemies, pickups: this.pickups, platforms: this.platforms, vines: this.vines, mazePassed: this.mazePassed });
+            this.load(vine.target, true); this.player.x = vine.spawnX; this.player.y = vine.spawnY - (this.player.h - 16); this.input.clear(); this.change(GameState.LEVEL_INTRO);
+        }
+        return true;
+    }
+    returnToTitle() { this.input.clear(); this.pipeTarget = null; this.change(GameState.TITLE); }
+    selectLevel(id: string) {
+        if (!PROGRESSION.includes(id) || !LEVELS[id]) return false;
+        this.saved.clear(); this.pipeTarget = null; this.input.clear(); this.load(id); this.time = this.level.time; this.change(GameState.LEVEL_INTRO); return true;
+    }
     private pipeStep() { if (!this.pipeTarget)
         return; if (!this.pipeExit) {
         this.player.y += .5;
         if (this.stateTicks >= 60) {
             const target = this.pipeTarget;
+            if (target.warp) {
+                this.saved.clear();
+                this.load(target.target);
+                this.time = this.level.time;
+                this.pipeTarget = null;
+                this.input.clear();
+                this.change(GameState.LEVEL_INTRO);
+                return;
+            }
             this.load(target.target, true);
             this.player.x = target.spawnX;
             this.player.y = target.spawnY + 32 - this.player.h;
@@ -464,6 +547,7 @@ export class Game {
             this.change(GameState.PLAYING);
             this.player.invulnerable = 60;
             this.pipeTarget = null;
+            this.input.clear();
         }
     } }
     private completeStep() {
@@ -473,9 +557,10 @@ export class Game {
                 if (e.kind === 'bowser')
                     e.y += 2;
             if (this.stateTicks % 5 === 0) {
-                const x = 125 - Math.floor(this.stateTicks / 5);
-                if (x >= 109)
-                    delete this.level.tiles[key(x, 11)];
+                const bridge = this.level.bridge ?? { start: 109, end: 125, row: 11 };
+                const x = bridge.end - Math.floor(this.stateTicks / 5);
+                if (x >= bridge.start)
+                    delete this.level.tiles[key(x, bridge.row)];
             }
             if (this.stateTicks > 100 && this.flagStage < 2)
                 this.flagStage = 2;
@@ -507,7 +592,7 @@ export class Game {
         }
         if (this.flagStage === 3 && this.stateTicks > 100) {
             this.completed.push(this.world);
-            if (this.levelIndex === 3)
+            if (this.levelIndex === PROGRESSION.length - 1)
                 this.change(GameState.VICTORY);
             else {
                 this.levelIndex++;

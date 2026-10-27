@@ -18,7 +18,7 @@ export class AudioManager {
         number
     ]> = { jump: [220, .18, 700], coin: [1100, .12, 1700], bump: [140, .07, 65], break: [90, .15, 30], emerge: [240, .35, 800], power: [400, .35, 1300], stomp: [160, .1, 55], kick: [270, .12, 95], fire: [650, .1, 100], damage: [800, .2, 100], death: [520, .6, 80], life: [650, .5, 1900], flag: [1000, .5, 300], complete: [500, .7, 1500] }; const [f, d, end] = tones[s]; this.tone(f, d, 'square', .05, end); }
     update(theme: Theme, star: boolean, playing: boolean) { if (!playing)
-        return; const selected = star ? 'star' : theme; if (selected !== this.theme) {
+        return; const selected = star ? 'star' : theme === 'night' || theme === 'athletic' || theme === 'sky' ? 'overworld' : theme === 'underwater' ? 'underground' : theme; if (selected !== this.theme) {
         this.theme = selected;
         this.note = 0;
         this.tick = 0;

@@ -24,6 +24,8 @@ export class Player implements Body {
     walk = 0;
     skidding = false;
     fireCooldown = 0;
+    climbing: number | null = null;
+    swimming = false;
     transform = 0;
     get big() { return this.power > 0; }
     setPower(power: 0 | 1 | 2) { const bottom = this.y + this.h; this.power = power; this.h = power ? 28 : 16; this.y = bottom - this.h; this.crouched = false; }
@@ -47,6 +49,7 @@ export interface Pickup extends Body {
 export interface Projectile extends Body {
     life: number;
     hostile: boolean;
+    kind?: 'fire' | 'hammer';
 }
 export interface Particle {
     x: number;
@@ -63,6 +66,7 @@ export interface MovingPlatform extends PlatformDef {
     phase: number;
     dx: number;
     dy: number;
+    fallSpeed?: number;
 }
 export const body = (x: number, y: number, w = 12, h = 16): Body => ({ x, y, w, h, vx: 0, vy: 0, grounded: false });
 export const overlaps = (a: Pick<Body, 'x' | 'y' | 'w' | 'h'>, b: Pick<Body, 'x' | 'y' | 'w' | 'h'>) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;

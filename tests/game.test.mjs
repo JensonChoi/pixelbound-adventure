@@ -64,7 +64,7 @@ test('pipe round trip preserves used blocks and main level enemies',()=>{
 });
 test('flag sequence advances worlds, awards time once, and finale wins',()=>{
  const g=playing();g.player.x=g.level.goal;g.player.y=100;tick(g);assert.equal(g.state,GameState.LEVEL_COMPLETE);const score=g.score;tick(g,350);assert.equal(g.world,'1-2');assert.ok(g.score>score);assert.equal(g.completed[0],'1-1');
- const h=playing('1-4');h.player.x=h.level.goal;h.player.y=160;tick(h);assert.equal(h.state,GameState.LEVEL_COMPLETE);tick(h,300);assert.equal(h.state,GameState.VICTORY);assert.equal(h.level.tiles[key(112,11)],undefined);
+ const h=playing('1-4');h.player.x=h.level.goal;h.player.y=160;tick(h);assert.equal(h.state,GameState.LEVEL_COMPLETE);tick(h,300);assert.equal(h.world,'2-1');assert.equal(h.state,GameState.LEVEL_INTRO);
 });
 test('camera never backtracks or exposes outside the level',()=>{
  const g=playing();g.enemies=[];g.player.x=600;tick(g);const camera=g.camera;g.player.x=300;tick(g);assert.equal(g.camera,camera);assert.equal(g.player.x,camera);g.player.x=g.level.width-1;tick(g);assert.ok(g.camera<=g.level.width-256);

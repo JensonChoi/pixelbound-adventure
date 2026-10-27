@@ -7,7 +7,7 @@ export class Renderer {
     draw(g: Game) {
         const c = this.ctx;
         c.imageSmoothingEnabled = false;
-        c.fillStyle = g.level.theme === 'overworld' ? '#5c94fc' : '#080a12';
+        c.fillStyle = g.level.theme === 'underwater' ? '#164bb5' : ['overworld', 'athletic', 'sky'].includes(g.level.theme) ? '#5c94fc' : '#080a12';
         c.fillRect(0, 0, 256, 240);
         if ([GameState.LEVEL_INTRO, GameState.GAME_OVER, GameState.VICTORY].includes(g.state)) {
             c.fillStyle = '#080a12';
@@ -26,8 +26,28 @@ export class Renderer {
                 continue;
             this.tile(t, x * 16, y * 16 - (t.bump ? Math.sin(t.bump / 12 * Math.PI) * 4 : 0), g.level.theme, g.frame);
         }
+        for (const zone of g.level.warpZones ?? []) {
+            text(c, 'WELCOME TO WARP ZONE!', zone.x, zone.y, '#fff', 1, 'center');
+            for (const id of zone.pipeIds) {
+                const link = g.level.pipes.find(p => p.id === id)!;
+                text(c, link.target.split('-')[0], link.x + 16, link.y - 30, '#fff', 1, 'center');
+            }
+        }
+        for (const [i, vine] of (g.level.vines ?? []).entries()) {
+            const height = g.vines[i] ?? 0;
+            c.fillStyle = '#79bb30'; c.fillRect(vine.x - 2, vine.bottom - height, 4, height);
+            for (let y = vine.bottom - height; y < vine.bottom; y += 8) { c.fillRect(vine.x - 7, y, 6, 3); c.fillRect(vine.x + 2, y + 4, 5, 3); }
+        }
+        for (const cannon of g.level.cannons ?? []) {
+            c.fillStyle = '#252634'; c.fillRect(cannon.x, cannon.y, 16, 13);
+            c.fillStyle = '#f6edda'; c.fillRect(cannon.x + 4, cannon.y + 3, 8, 3); c.fillRect(cannon.x + 7, cannon.y + 6, 3, 4);
+        }
+        for (const lava of g.level.lava ?? []) {
+            c.fillStyle = '#c53218'; c.fillRect(lava.x, lava.y, lava.width, 240 - lava.y);
+            c.fillStyle = '#ffc247'; for (let x = lava.x; x < lava.x + lava.width; x += 8) c.fillRect(x, lava.y + Math.floor((x + g.frame) / 8) % 2 * 2, 6, 3);
+        }
         for (const link of g.level.pipes) {
-            if (Math.abs(g.player.x - link.x) < 48 && g.state === GameState.PLAYING) {
+            if (!link.warp && Math.abs(g.player.x - link.x) < 48 && g.state === GameState.PLAYING) {
                 text(c, 'V', link.x + 16, link.y - 25 - Math.floor(g.frame / 20) % 2 * 2, '#fff1df', 1, 'center');
             }
         }
@@ -48,7 +68,7 @@ export class Renderer {
             c.fillStyle = '#a5a6af';
             c.fillRect(bar.x - 4, bar.y - 4, 8, 8);
             for (let i = 1; i <= bar.length; i++) {
-                const a = g.frame * .035;
+                const a = g.frame * (bar.speed ?? .035) + (bar.angle ?? 0);
                 this.flame(bar.x + Math.cos(a) * i * 8, bar.y + Math.sin(a) * i * 8, g.frame);
             }
         }
@@ -57,8 +77,8 @@ export class Renderer {
                 continue;
             if (e.kind === 'plant' && e.y >= e.homeY - 3)
                 continue;
-            const name = e.kind === 'green' || e.kind === 'red' ? (e.shell ? 'shell' : 'koopa') : e.kind;
-            const palette: Record<string, string> = e.kind === 'red' ? { g: '#e34326', G: '#922d1c' } : {};
+            const name = e.kind === 'green' || e.kind === 'red' || e.kind === 'buzzy' ? (e.shell ? 'shell' : 'koopa') : e.kind === 'leapingCheep' ? 'cheep' : e.kind;
+            const palette: Record<string, string> = e.kind === 'red' ? { g: '#e34326', G: '#922d1c' } : e.kind === 'buzzy' ? { g: '#3979b0', G: '#162237' } : {};
             if (e.kind === 'plant') {
                 c.save();
                 c.beginPath();
@@ -81,6 +101,7 @@ export class Renderer {
             c.restore();
         }
         for (const f of g.projectiles) {
+            if (f.kind === 'hammer') { sprite(c, 'hammer', f.x, f.y, { flip: Math.floor(g.frame / 6) % 2 === 0 }); continue; }
             this.flame(f.x + 3, f.y + 3, g.frame);
             if (f.hostile)
                 this.flame(f.x + 9, f.y + 3, g.frame + 3);
@@ -121,7 +142,7 @@ export class Renderer {
             return;
         const dead = g.state === GameState.PLAYER_DYING;
         const jumping = !p.grounded;
-        const frame = dead ? 2 : p.skidding ? -2 : jumping ? (p.vy < 0 ? 1 : 2) : Math.abs(p.vx) > .1 ? Math.floor(p.walk) % 3 - 1 : 0;
+        const frame = p.climbing !== null || p.swimming ? Math.floor(g.frame / 8) % 3 - 1 : dead ? 2 : p.skidding ? -2 : jumping ? (p.vy < 0 ? 1 : 2) : Math.abs(p.vx) > .1 ? Math.floor(p.walk) % 3 - 1 : 0;
         const palette: Record<string, string> = p.star || p.transform && Math.floor(g.frame / 3) % 2 ? { r: ['#fff1df', '#60e5ba', '#ffcc49', '#ef718b'][Math.floor(g.frame / 4) % 4], b: '#3c5db7' } : p.power === 2 ? { r: '#fff1df', b: '#d43b21' } : {};
         c.save();
         if (g.state === GameState.PIPE) {
@@ -138,7 +159,7 @@ export class Renderer {
             c.rect(g.camera, 0, 256, surface);
             c.clip();
         }
-        sprite(c, p.h > 16 ? 'marioBig' : 'mario', p.x - 2, p.y, { flip: p.facing < 0, palette, frame });
+        sprite(c, p.swimming ? (p.h > 16 ? 'marioBigSwim' : 'marioSwim') : p.climbing !== null ? (p.h > 16 ? 'marioBigClimb' : 'marioClimb') : p.h > 16 ? 'marioBig' : 'mario', p.x - 2, p.y, { flip: p.facing < 0, palette, frame });
         c.restore();
     }
     private hud(g: Game) { const c = this.ctx; text(c, 'MARIO', 16, 12); text(c, String(g.score).padStart(6, '0'), 16, 22); this.coin(89, 21, g.frame); text(c, 'X' + String(g.coins).padStart(2, '0'), 99, 22); text(c, 'WORLD', 151, 12); text(c, g.world, 157, 22); text(c, 'TIME', 214, 12); text(c, String(Math.max(0, Math.ceil(g.time))).padStart(3, '0'), 220, 22); }
@@ -182,7 +203,7 @@ export class Renderer {
         text(c, 'THANK YOU MARIO!', 128, 66, '#ffca68', 2, 'center');
         sprite(c, 'mario', 116, 94, { scaleY: 2 });
         text(c, 'THE KINGDOM IS SAFE.', 128, 146, '#fff1df', 1, 'center');
-        text(c, 'ALL FOUR COURSES COMPLETE', 128, 166, '#a3adb9', 1, 'center');
+        text(c, 'ALL EIGHT WORLDS SAVED', 128, 166, '#a3adb9', 1, 'center');
         text(c, 'PRESS ENTER TO PLAY AGAIN', 128, 194, '#ffca68', 1, 'center');
     } }
     private coin(x: number, y: number, frame: number) { const c = this.ctx; const w = [6, 4, 2, 4][Math.floor(frame / 8) % 4]; c.fillStyle = '#79460d'; c.fillRect(Math.round(x + 4 - w / 2), y, w, 10); c.fillStyle = '#ffbc37'; c.fillRect(Math.round(x + 3 - w / 2), y, w, 9); c.fillStyle = '#fff1a4'; c.fillRect(Math.round(x + 3 - w / 2), y + 1, 1, 6); }
@@ -192,6 +213,9 @@ export class Renderer {
         y = Math.round(y);
         const underground = theme === 'underground', castle = theme === 'castle';
         const main = underground ? '#2573b3' : castle ? '#797e90' : '#bd5428', light = underground ? '#80c7e6' : castle ? '#c0c5d0' : '#f6ac70', dark = underground ? '#08293d' : castle ? '#282b40' : '#582a1b';
+        if (t.kind === 'mushroom') {
+            c.fillStyle = '#b63024'; c.fillRect(x, y, 16, 8); c.fillStyle = '#fff1df'; c.fillRect(x + 3, y + 2, 5, 3); c.fillStyle = '#e8c59a'; c.fillRect(x + 2, y + 8, 12, 8); return;
+        }
         if (t.kind.startsWith('pipe')) {
             const left = t.kind.endsWith('L'), top = t.kind === 'pipeL' || t.kind === 'pipeR';
             c.fillStyle = '#173b08';
@@ -265,16 +289,23 @@ export class Renderer {
     private scenery(g: Game) {
         const c = this.ctx;
         const camera = Math.floor(g.camera);
-        if (g.level.theme === 'overworld') {
+        if (['overworld', 'night', 'athletic', 'sky'].includes(g.level.theme)) {
             for (let i = 0; i < g.level.width / 384 + 1; i++) {
                 const base = i * 384 - camera;
                 this.cloud(base + 130, 58, 1);
                 this.cloud(base + 270, 87, 2);
-                this.hill(base + 1, 208, 40);
-                this.hill(base + 236, 208, 24);
-                this.bush(base + 177, 208, 3);
-                this.bush(base + 330, 208, 2);
+                if (g.level.theme === 'overworld' || g.level.theme === 'night') {
+                    this.hill(base + 1, 208, 40);
+                    this.hill(base + 236, 208, 24);
+                    this.bush(base + 177, 208, 3);
+                    this.bush(base + 330, 208, 2);
+                }
             }
+        }
+        else if (g.level.theme === 'underwater') {
+            c.fillStyle = '#55b4dc'; for (let x = 0; x < 256; x += 24) c.fillRect(x, 38 + Math.floor((x + g.frame) / 12) % 2, 20, 2);
+            for (let x = 0; x < g.level.width; x += 144) { const a = x - camera; c.fillStyle = '#e392ad'; c.fillRect(a + 7, 170, 5, 38); c.fillRect(a, 181, 20, 4); c.fillRect(a, 174, 3, 10); c.fillRect(a + 17, 172, 3, 11); }
+            c.strokeStyle = '#a5deee'; for (let i = 0; i < 8; i++) c.strokeRect((i * 37 - camera * .3 + 2048) % 256, 48 + (i * 23 - g.frame * .3 + 4096) % 150, 2, 3);
         }
         else if (g.level.theme === 'castle') {
             c.fillStyle = '#cf351c';

@@ -1,5 +1,5 @@
-export type Action = 'left' | 'right' | 'jump' | 'run' | 'down' | 'start';
-const bindings: Record<string, Action> = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', Space: 'jump', KeyZ: 'jump', ShiftLeft: 'run', ShiftRight: 'run', KeyX: 'run', ArrowDown: 'down', KeyS: 'down', Enter: 'start' };
+export type Action = 'left' | 'right' | 'jump' | 'run' | 'down' | 'up' | 'start';
+const bindings: Record<string, Action> = { ArrowUp: 'up', KeyW: 'up', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', Space: 'jump', KeyZ: 'jump', ShiftLeft: 'run', ShiftRight: 'run', KeyX: 'run', ArrowDown: 'down', KeyS: 'down', Enter: 'start' };
 export class Input {
     held = new Set<Action>();
     pressed = new Set<Action>();
