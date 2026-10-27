@@ -54,6 +54,7 @@ test('registry contains 32 playable stages and every connected room is valid', (
 test('every progression boundary preserves power and final castle alone wins', () => {
     for(const [index,id] of PROGRESSION.entries()) {
         const g=playing(id==='8-4'?'8-4-bowser':id);g.player.setPower(2);g.coins=23;g.time=0;g.enemies=[];g.state=GameState.LEVEL_COMPLETE;g.flagStage=3;g.stateTicks=101;
+        if(g.level.ending){g.castlePhase='dialogue';g.input.set('start','start',true);}
         ticks(g);assert.equal(g.player.power,2);assert.equal(g.coins,23);assert.equal(g.lives,5);assert.deepEqual(g.completed,[id]);
         if(index===31)assert.equal(g.state,GameState.VICTORY);else {assert.equal(g.world,PROGRESSION[index+1]);assert.equal(g.state,GameState.LEVEL_INTRO);assert.equal(g.time,g.level.time);assert.equal(g.camera,0);}
     }
@@ -107,7 +108,8 @@ test('4-2 warp ordering and all warp powers preserve the session',()=>{
 });
 test('8-4 replay visits every castle room and triggers final victory',()=>{
     const g=playing('8-4'),visited=new Set();replay(g,'tests/fixtures/route-8-4.json',()=>visited.add(g.level.id));
-    assert.deepEqual([...visited],['8-4','8-4-hall','8-4-water','8-4-bowser']);g.input.clear();ticks(g,600);assert.equal(g.state,GameState.VICTORY);assert.ok(g.completed.includes('8-4'));
+    assert.deepEqual([...visited],['8-4','8-4-hall','8-4-water','8-4-bowser']);g.input.clear();ticks(g,600);assert.equal(g.castlePhase,'dialogue');assert.equal(g.state,GameState.LEVEL_COMPLETE);
+    g.input.set('start','start',true);ticks(g);assert.equal(g.state,GameState.VICTORY);assert.ok(g.completed.includes('8-4'));
     g.returnToTitle();assert.equal(g.state,GameState.TITLE);g.begin();assert.equal(g.lives,5);assert.equal(g.world,'1-1');assert.equal(g.highestWorldReached,1);
 });
 

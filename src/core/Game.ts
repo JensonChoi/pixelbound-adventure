@@ -5,7 +5,9 @@ import { blocked, move, PHYSICS, WATER_PHYSICS, solid } from './Physics';
 import { Player, body, overlaps, type Enemy, type MovingPlatform, type Particle, type Pickup, type Projectile } from '../entities/Entity';
 import { cloneLevel, key, tileAt, type LevelDefinition, type Tile, type PipeLink } from '../world/Level';
 import { LEVELS, PROGRESSION } from '../world/levels';
+import { CHARACTERS, type CharacterId } from '../entities/Character';
 const STARTING_LIVES = 5;
+export type CastleEndingPhase = 'bridge' | 'walking' | 'bonus' | 'dialogue' | 'transitioning';
 
 export enum GameState {
     TITLE = 'TITLE',
@@ -28,6 +30,9 @@ interface Snapshot {
 }
 export class Game {
     state = GameState.TITLE;
+    private characterId: CharacterId = 'mario';
+    castlePhase: CastleEndingPhase | null = null;
+    castleTicks = 0;
     player = new Player();
     level: LevelDefinition = cloneLevel(LEVELS['1-1']);
     enemies: Enemy[] = [];
@@ -54,9 +59,23 @@ export class Game {
     private flagStage = 0;
     constructor(public input = new Input(), public audio = new AudioManager()) { this.load('1-1'); this.state = GameState.TITLE; }
     get world() { return PROGRESSION[this.levelIndex]; }
+    get selectedCharacter() { return this.characterId; }
+    get character() { return CHARACTERS[this.characterId]; }
+    selectCharacter(id: CharacterId) {
+        if (this.state !== GameState.TITLE) return;
+        this.characterId = id;
+    }
+    get rescueDialogue(): string[] {
+        if (this.castlePhase !== 'dialogue') return [];
+        return [`THANK YOU ${this.character.displayName}!`, ...(this.level.ending?.character === 'peach'
+            ? ['YOUR QUEST IS OVER.', 'YOU SAVED THE PRINCESS!']
+            : ['BUT OUR PRINCESS IS', 'IN ANOTHER CASTLE!'])];
+    }
     get progress() { return Math.min(1, (this.player.x / Math.min(this.level.goal, this.level.width))); }
     load(id: string, restore = false) {
         if (!LEVELS[id]) return false;
+        this.castlePhase = null;
+        this.castleTicks = 0;
         const owner = LEVELS[id].stageId ?? (id === 'bonus' ? '1-1' : id.slice(0, 3));
         const index = PROGRESSION.indexOf(owner);
         if (index >= 0) this.levelIndex = index;
@@ -150,11 +169,20 @@ export class Game {
     defeat(e: Enemy, points = 100) { if (e.dead)
         return; e.dead = 30; e.vx = 0; this.addScore(points, e.x, e.y); }
     private finish() { if (this.state !== GameState.PLAYING)
-        return; this.addScore(this.level.axe ? 5000 : Math.max(100, Math.ceil((208 - this.player.y) / 32) * 1000), this.player.x, this.player.y); this.flagStage = 0; this.player.vx = 0; this.player.vy = 0; this.change(GameState.LEVEL_COMPLETE); this.audio.play('flag'); }
+        return; this.addScore(this.level.axe ? 5000 : Math.max(100, Math.ceil((208 - this.player.y) / 32) * 1000), this.player.x, this.player.y); this.flagStage = 0; this.player.vx = 0; this.player.vy = 0; this.change(GameState.LEVEL_COMPLETE); this.audio.play('flag');
+        if (this.level.ending) {
+            this.castlePhase = 'bridge'; this.castleTicks = 0; this.input.clear(); this.projectiles = [];
+            this.player.invulnerable = 0; this.player.climbing = null; this.player.fireCooldown = 0;
+        }
+    }
     update() {
         if (this.state !== GameState.PAUSED)
             this.frame++;
         this.stateTicks++;
+        if (this.state === GameState.TITLE) {
+            if (this.input.tap('up')) this.selectCharacter('mario');
+            else if (this.input.tap('down')) this.selectCharacter('luigi');
+        }
         if (this.input.tap('start')) {
             if ([GameState.TITLE, GameState.GAME_OVER, GameState.VICTORY].includes(this.state))
                 this.begin();
@@ -514,7 +542,7 @@ export class Game {
         }
         return true;
     }
-    returnToTitle() { this.input.clear(); this.pipeTarget = null; this.change(GameState.TITLE); }
+    returnToTitle() { this.input.clear(); this.pipeTarget = null; this.saved.clear(); this.load('1-1'); this.change(GameState.TITLE); }
     selectLevel(id: string) {
         if (!PROGRESSION.includes(id) || !LEVELS[id]) return false;
         this.saved.clear(); this.pipeTarget = null; this.input.clear(); this.load(id); this.time = this.level.time; this.change(GameState.LEVEL_INTRO); return true;
@@ -551,21 +579,9 @@ export class Game {
         }
     } }
     private completeStep() {
+        if (this.level.ending) { this.castleStep(); return; }
         const p = this.player;
-        if (this.level.axe) {
-            for (const e of this.enemies)
-                if (e.kind === 'bowser')
-                    e.y += 2;
-            if (this.stateTicks % 5 === 0) {
-                const bridge = this.level.bridge ?? { start: 109, end: 125, row: 11 };
-                const x = bridge.end - Math.floor(this.stateTicks / 5);
-                if (x >= bridge.start)
-                    delete this.level.tiles[key(x, bridge.row)];
-            }
-            if (this.stateTicks > 100 && this.flagStage < 2)
-                this.flagStage = 2;
-        }
-        else if (this.flagStage === 0) {
+        if (this.flagStage === 0) {
             p.x = this.level.goal - 6;
             p.y += 1.6;
             if (p.y + p.h >= 208) {
@@ -599,6 +615,54 @@ export class Game {
                 this.saved.clear();
                 this.load(this.world);
                 this.time = this.level.time;
+                this.change(GameState.LEVEL_INTRO);
+            }
+        }
+    }
+
+    private castleStep() {
+        const ending = this.level.ending!, p = this.player;
+        this.castleTicks++;
+        if (this.castlePhase === 'bridge') {
+            const bridge = this.level.bridge!;
+            if (this.castleTicks % 5 === 0) {
+                const x = bridge.end - this.castleTicks / 5;
+                if (x >= bridge.start) delete this.level.tiles[key(x, bridge.row)];
+            }
+            for (const enemy of this.enemies) if (enemy.kind === 'bowser' && !enemy.dead) enemy.y += 2;
+            if (this.castleTicks >= Math.max(100, (bridge.end - bridge.start) * 5)) {
+                p.x = Math.max(p.x, this.level.goal);
+                p.setPower(p.power); p.skidding = false;
+                this.castlePhase = 'walking'; this.castleTicks = 0;
+            }
+        }
+        else if (this.castlePhase === 'walking') {
+            p.facing = 1; p.vx = Math.min(1.1, Math.max(0, ending.x - 28 - p.x));
+            p.vy += PHYSICS.gravity; p.walk += .2;
+            move(p, this.level);
+            const target = Math.max(0, Math.min(this.level.width - 256, ending.x - 144));
+            this.camera += Math.max(-2, Math.min(2, target - this.camera));
+            if (p.x >= ending.x - 28 && p.grounded && Math.abs(target - this.camera) < 1) {
+                p.vx = 0; this.camera = target;
+                this.castlePhase = 'bonus'; this.castleTicks = 0;
+            }
+        }
+        else if (this.castlePhase === 'bonus') {
+            const bonus = Math.min(10, Math.ceil(this.time));
+            this.time = Math.max(0, this.time - bonus); this.addScore(bonus * 50);
+            if (this.time === 0) {
+                this.castlePhase = 'dialogue'; this.castleTicks = 0; this.input.clear();
+                this.audio.play(ending.character === 'peach' ? 'rescuePeach' : 'rescueToad');
+            }
+        }
+        else if (this.castlePhase === 'dialogue' && (this.input.tap('start') || ending.character === 'toad' && this.castleTicks >= 240)) {
+            this.castlePhase = 'transitioning'; this.input.clear();
+            if (!this.completed.includes(this.world)) this.completed.push(this.world);
+            if (ending.character === 'peach') {
+                this.change(GameState.VICTORY); this.audio.play('victory');
+            }
+            else {
+                this.saved.clear(); this.load(ending.nextLevel); this.time = this.level.time;
                 this.change(GameState.LEVEL_INTRO);
             }
         }

@@ -2,6 +2,7 @@ import { Game, GameState } from '../src/core/Game';
 import { Renderer } from '../src/graphics/Renderer';
 import { type Action } from '../src/core/Input';
 import { PROGRESSION } from '../src/world/levels';
+import type { CharacterId } from '../src/entities/Character';
 const canvas = document.querySelector<HTMLCanvasElement>('#game')!;
 const renderer = new Renderer(canvas);
 const select = document.querySelector<HTMLSelectElement>('#route')!;
@@ -16,7 +17,7 @@ document.querySelector('#replay')!.addEventListener('click', async () => {
         const response = await fetch(`/tests/fixtures/${route.file}`);
         if (!response.ok) throw new Error('Fixture unavailable');
         const data = await response.json() as (number | { keys: Action[]; frames: number })[];
-        const g = new Game(); g.load(route.stage); g.time = g.level.time; g.change(GameState.PLAYING);
+        const g = new Game(); g.selectCharacter(document.querySelector<HTMLSelectElement>('#character')!.value as CharacterId); g.load(route.stage); g.time = g.level.time; g.change(GameState.PLAYING);
         let frames = 0, done = false;
         for (const [index, entry] of data.entries()) {
             const step = typeof entry === 'number' ? { keys: actions[entry], frames: 16 } : entry;
@@ -29,9 +30,13 @@ document.querySelector('#replay')!.addEventListener('click', async () => {
             }
             if (done || stop === 'middle' && index >= data.length / 2) break;
         }
-        if (stop === 'victory') { g.input.clear(); for (let i = 0; i < 600 && g.state !== GameState.VICTORY; i++) g.update(); }
+        if (stop === 'rescue' || stop === 'victory') {
+            g.input.clear();
+            for (let i = 0; i < 900 && g.castlePhase !== 'dialogue' && g.state === GameState.LEVEL_COMPLETE; i++) g.update();
+            if (stop === 'victory' && g.castlePhase === 'dialogue') { g.input.set('confirm', 'start', true); g.update(); }
+        }
         renderer.draw(g);
-        output.textContent = `${route.label} · ${frames} frames · ${g.level.id} · ${g.state} · ${g.lives} lives · score ${g.score} · time ${Math.ceil(g.time)}`;
+        output.textContent = `${g.character.displayName} · ${route.label} · ${frames} frames · ${g.level.id} · ${g.state} ${g.castlePhase ?? ''} · ${g.lives} lives · score ${g.score} · time ${Math.ceil(g.time)}`;
     } catch (error) { output.textContent = String(error); }
 });
 renderer.draw(new Game());

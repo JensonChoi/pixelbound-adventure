@@ -1,5 +1,5 @@
 import type { Theme } from '../world/Level';
-export type Sound = 'jump' | 'coin' | 'bump' | 'break' | 'emerge' | 'power' | 'stomp' | 'kick' | 'fire' | 'damage' | 'death' | 'life' | 'flag' | 'complete';
+export type Sound = 'jump' | 'coin' | 'bump' | 'break' | 'emerge' | 'power' | 'stomp' | 'kick' | 'fire' | 'damage' | 'death' | 'life' | 'flag' | 'complete' | 'rescueToad' | 'rescuePeach' | 'victory';
 const melodies: Record<string, number[]> = { overworld: [76, 0, 79, 0, 84, 83, 79, 76, 77, 0, 81, 0, 79, 76, 74, 72, 76, 79, 84, 88, 86, 84, 79, 0, 81, 77, 74, 71, 72, 0, 0, 0], underground: [48, 60, 51, 63, 46, 58, 49, 61, 48, 0, 55, 0, 51, 0, 46, 0], castle: [45, 52, 57, 60, 59, 52, 56, 59, 45, 52, 57, 60, 62, 59, 56, 52], star: [84, 79, 84, 88, 86, 81, 86, 89, 88, 84, 88, 91, 89, 86, 89, 93] };
 export class AudioManager {
     context: AudioContext | null = null;
@@ -12,11 +12,27 @@ export class AudioManager {
     tone(freq: number, duration: number, type: OscillatorType = 'square', volume = 0.035, slide?: number) { if (!this.context || this.muted)
         return; const c = this.context; const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(freq, c.currentTime); if (slide)
         o.frequency.exponentialRampToValueAtTime(slide, c.currentTime + duration); g.gain.setValueAtTime(volume, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + duration); }
-    play(s: Sound) { const tones: Record<Sound, [
+    play(s: Sound) {
+        if (s === 'rescueToad' || s === 'rescuePeach' || s === 'victory') {
+            this.fanfare(s === 'rescueToad' ? [72, 76, 79, 84] : s === 'rescuePeach' ? [76, 79, 84, 83, 84] : [72, 76, 79, 84, 79, 84, 88, 84]);
+            return;
+        }
+        const tones: Record<Exclude<Sound, 'rescueToad' | 'rescuePeach' | 'victory'>, [
         number,
         number,
         number
     ]> = { jump: [220, .18, 700], coin: [1100, .12, 1700], bump: [140, .07, 65], break: [90, .15, 30], emerge: [240, .35, 800], power: [400, .35, 1300], stomp: [160, .1, 55], kick: [270, .12, 95], fire: [650, .1, 100], damage: [800, .2, 100], death: [520, .6, 80], life: [650, .5, 1900], flag: [1000, .5, 300], complete: [500, .7, 1500] }; const [f, d, end] = tones[s]; this.tone(f, d, 'square', .05, end); }
+    private fanfare(notes: number[]) {
+        if (!this.context || this.muted) return;
+        const c = this.context;
+        notes.forEach((note, i) => {
+            const start = c.currentTime + i * .15, duration = i === notes.length - 1 ? .4 : .14;
+            const oscillator = c.createOscillator(), gain = c.createGain();
+            oscillator.type = 'square'; oscillator.frequency.value = 440 * 2 ** ((note - 69) / 12);
+            gain.gain.setValueAtTime(.035, start); gain.gain.exponentialRampToValueAtTime(.001, start + duration);
+            oscillator.connect(gain); gain.connect(c.destination); oscillator.start(start); oscillator.stop(start + duration);
+        });
+    }
     update(theme: Theme, star: boolean, playing: boolean) { if (!playing)
         return; const selected = star ? 'star' : theme === 'night' || theme === 'athletic' || theme === 'sky' ? 'overworld' : theme === 'underwater' ? 'underground' : theme; if (selected !== this.theme) {
         this.theme = selected;

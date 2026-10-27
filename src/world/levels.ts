@@ -1,5 +1,5 @@
 import { ceilingSecret, firstDestinations, remainingLevels } from './expansion';
-import { block, coins, enemy, makeLevel, pipe, rect, stairs, type LevelDefinition } from './Level';
+import { block, coins, enemy, makeLevel, pipe, rect, stairs, type LevelDefinition, type LevelId } from './Level';
 function overworld() {
     const l = makeLevel('1-1', 'A familiar beginning', 'overworld', 218);
     rect(l, 0, 13, 69, 2);
@@ -137,11 +137,22 @@ original[3].bridge = { start: 109, end: 125, row: 11 };
 export const LEVELS: Record<string, LevelDefinition> = Object.fromEntries([...original, ...firstDestinations(), ...remainingLevels(original[1])].map(l => [l.id, l]));
 export const PROGRESSION = Array.from({ length: 8 }, (_, w) => Array.from({ length: 4 }, (_, s) => `${w + 1}-${s + 1}`)).flat();
 
+// Only the final room of 8-4 has an axe and a rescue character.
+for (const level of Object.values(LEVELS)) {
+    if (!level.axe) continue;
+    const world = Number((level.stageId ?? level.id)[0]);
+    const position = { x: level.goal + 144, floorY: 208 };
+    level.ending = world === 8 ? { ...position, character: 'peach' } : {
+        ...position, character: 'toad', nextLevel: `${world + 1}-1` as LevelId
+    };
+}
+
 // Fail early for authored data; runtime load() also rejects invalid external IDs safely.
 export function validateLevels() {
     for (const id of PROGRESSION) if (!LEVELS[id]) throw new Error(`Missing playable stage: ${id}`);
     for (const level of Object.values(LEVELS)) {
         if (level.width < 256 || level.time <= 0) throw new Error(`Invalid bounds or timer: ${level.id}`);
+        if (level.ending && (!level.axe || level.ending.x + 16 > level.width || level.ending.nextLevel && !LEVELS[level.ending.nextLevel])) throw new Error(`Invalid castle ending: ${level.id}`);
         for (const link of [...level.pipes, ...(level.vines ?? [])]) if (!LEVELS[link.target]) throw new Error(`Invalid destination from ${level.id}: ${link.target}`);
         for (const zone of level.warpZones ?? []) if (zone.pipeIds.some(id => !level.pipes.some(p => p.id === id && p.warp))) throw new Error(`Invalid warp zone: ${level.id}`);
     }

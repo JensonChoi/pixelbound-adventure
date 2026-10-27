@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite, then press **Enter** to begin.
+Open the local URL printed by Vite, select **Mario or Luigi** with Up/W or Down/S (or the character buttons), then press **Enter** to begin. Both characters share the same physics and abilities; Luigi wears a green shirt and blue overalls, switching to a white shirt and green overalls with fire power.
 
 ```sh
 npm run typecheck
@@ -48,7 +48,8 @@ Vite emits relative asset URLs so the same build works under the GitHub Pages re
 | Crouch / enter a pipe / descend vine | Down or S |
 | Climb vine | Up or W; Jump detaches |
 | Swim upward | Press Jump repeatedly |
-| Start / pause / resume | Enter |
+| Select Mario / Luigi on title | Up / W and Down / S |
+| Start / pause / resume / continue dialogue | Enter |
 | Restart course, costing one life | Restart Level button next to Start/Pause |
 
 Touch devices also show directional, jump, and run/fire buttons. The cabinet has start/pause, sound, and fullscreen controls. Losing browser focus pauses active gameplay and clears held inputs. Press Enter to resume.
@@ -62,9 +63,11 @@ Touch devices also show directional, jump, and run/fire buttons. The cabinet has
 
 Worlds 2–8 introduce underwater passages, flying-fish bridges, night stages, mushroom platforms, Hammer Bros., Lakitu and Spinies, Bullet Bills, Buzzy Beetles, lava bubbles, and increasingly difficult castles. World 8-4 connects multiple castle rooms and an underwater passage before the final Bowser encounter.
 
+Each castle axe collapses the bridge and starts an automatic walk into the rescue chamber. In Worlds 1–7, Toad thanks the selected character before advancing to the next world after four seconds or Enter/Continue. World 8-4 ends with Princess Peach: her dialogue stays visible until Enter/Continue, then the victory screen shows your final score. Gameplay and damage stop during rescues; remaining time becomes bonus points before dialogue. Character selection stays locked for the run and persists through deaths and warps. Return to Title from pause, Game Over, or victory to choose again; Play Again keeps the current character.
+
 The hidden 1-2 ceiling route leads to three pipes ordered **4, 3, 2**. In 4-2, the ceiling route leads to **5**; revealing hidden stepping blocks and the vine leads to sky pipes ordered **6, 7, 8**. All warps preserve score, coins, lives, and power, reset the destination timer, and show the destination intro. Normal exits remain available.
 
-Mushrooms grow Mario, flowers grant fireballs, and stars grant temporary invincibility. A powered-up block supplies a flower instead of a mushroom. Stomp Koopas to create shells, then touch a stationary shell to kick it. Collecting 100 coins awards a life.
+Mushrooms grow the selected character, flowers grant fireballs, and stars grant temporary invincibility. A powered-up block supplies a flower instead of a mushroom. Stomp Koopas to create shells, then touch a stationary shell to kick it. Collecting 100 coins awards a life.
 
 Each run begins with five lives. Death removes power-ups and restarts the course. Score and coins carry across deaths; power carries across completed courses. Bonus-room visits preserve the main course's blocks and enemies. The countdown uses classic accelerated game time, stopping during pause and transitions. Flagpole completion converts the remaining time into points. Only high score and mute preference persist between sessions.
 
@@ -85,7 +88,7 @@ The simulation subdivides fast movement, resolves horizontal and vertical collis
 
 `npm test` uses Node's built-in test runner, with esbuild compiling the TypeScript imports. It covers collision tunneling, jump height, acceleration and skidding, blocks, power-ups, damage, Goombas, shells, red Koopas, plants, Bowser, moving platforms, coins/lives, timer pausing, pipe round trips, restarting, progression, victory, and identical simulation at 30/60/144 Hz rendering rates.
 
-Controller replay fixtures clear all 32 courses and all seven warp destinations using ordinary inputs and the real physics/enemy systems. The original four World 1 fixtures are unchanged. They never teleport Mario, disable collisions, or grant invulnerability during traversal. The pipe round-trip test separately verifies bonus-room preservation.
+Controller replay fixtures clear all 32 courses and all seven warp destinations using ordinary inputs and the real physics/enemy systems. Both characters replay the same fixtures with identical simulation results. The original four World 1 fixtures are unchanged. They never teleport the player, disable collisions, or grant invulnerability during traversal. The pipe round-trip test separately verifies bonus-room preservation. Rescue tests cover all eight castles with both characters, state preservation, dialogue timing, input repeat protection, and one-time transitions and sounds.
 
 Validation commands: `npm run typecheck`, `npm test`, and `npm run build`. The suite includes 32 full-course replays, seven secret-route replays, transition/state checks, maze loops, water/vine movement, enemy interactions, and final victory. Browser verification uses the same simulation and renderer through `/tests/browser.html` while the development server is running. That viewer and its fixtures are not included in production builds.
 

@@ -7,6 +7,7 @@ export class Input {
     constructor(target?: Window) { if (target) {
         target.addEventListener('keydown', e => { const a = bindings[e.code]; if (a) {
             e.preventDefault();
+            if (e.repeat) return;
             this.set(e.code, a, true);
         } });
         target.addEventListener('keyup', e => { const a = bindings[e.code]; if (a) {
