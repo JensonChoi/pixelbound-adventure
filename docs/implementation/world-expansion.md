@@ -46,4 +46,4 @@ Replay fixtures prove a valid completion path rather than exhaustively testing e
 - Warp chamber labels, sky scenery, victory lettering, and the narrow underwater interface were visually inspected. No application console errors were observed.
 - Production and offline output contain no development selector. Offline JavaScript and CSS are inline. Direct offline `file://` launch remains unverified because the browser tool's URL policy blocks local-file navigation. Physical touchscreen hardware, fullscreen, and browsers other than Chrome were not manually tested.
 
-Screenshots: [1-2 warp zone](screenshots/warp-1-2.jpg), [4-2 sky warp zone](screenshots/warp-4-2-sky.jpg), [final victory](screenshots/victory.jpg), [narrow underwater interface](screenshots/narrow-underwater.jpg).
+Screenshots: [1-2 warp zone](../screenshots/warp-1-2.jpg), [4-2 sky warp zone](../screenshots/warp-4-2-sky.jpg), [final victory](../screenshots/victory.jpg), [narrow underwater interface](../screenshots/narrow-underwater.jpg).
