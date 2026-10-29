@@ -122,7 +122,7 @@ function castle() {
     [30, 53, 79, 96].forEach((x, i) => { rect(l, x, 11, 1, 2, 'stone'); l.firebars.push({ x: x * 16 + 8, y: 176, length: i % 2 ? 5 : 4 }); });
     l.platforms.push({ x: 102 * 16, y: 184, width: 48, axis: 'x', range: 24, speed: 0.025 });
     rect(l, 109, 11, 16, 1, 'brick');
-    enemy(l, 'bowser', 119, 9);
+    enemy(l, 'brimstone', 119, 9);
     l.goal = 125 * 16;
     coins(l, 34, 9, 5);
     return l;
@@ -142,8 +142,8 @@ for (const level of Object.values(LEVELS)) {
     if (!level.axe) continue;
     const world = Number((level.stageId ?? level.id)[0]);
     const position = { x: level.goal + 144, floorY: 208 };
-    level.ending = world === 8 ? { ...position, character: 'peach' } : {
-        ...position, character: 'toad', nextLevel: `${world + 1}-1` as LevelId
+    level.ending = world === 8 ? { ...position, character: 'elara' } : {
+        ...position, character: 'moss', nextLevel: `${world + 1}-1` as LevelId
     };
 }
 

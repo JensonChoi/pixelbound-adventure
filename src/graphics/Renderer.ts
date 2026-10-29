@@ -90,7 +90,7 @@ export class Renderer {
                 c.restore();
             }
             else
-                sprite(c, name, e.x - 2, e.y + (e.dead ? 12 : 0), { flip: e.vx > 0, palette, scaleX: e.kind === 'bowser' ? 2 : 1, scaleY: e.dead ? .25 : e.kind === 'bowser' ? 2 : 1, frame: e.dead || e.shell ? 0 : Math.floor(g.frame / 10) % 2 });
+                sprite(c, name, e.x - 2, e.y + (e.dead ? 12 : 0), { flip: e.vx > 0, palette, scaleX: e.kind === 'brimstone' ? 2 : 1, scaleY: e.dead ? .25 : e.kind === 'brimstone' ? 2 : 1, frame: e.dead || e.shell ? 0 : Math.floor(g.frame / 10) % 2 });
         }
         for (const item of g.pickups) {
             c.save();
@@ -111,12 +111,12 @@ export class Renderer {
         if (g.level.ending && g.state !== GameState.TITLE) {
             const ending = g.level.ending;
             const celebrate = g.castlePhase === 'dialogue' && Math.floor(g.frame / 24) % 2 === 0;
-            sprite(c, ending.character + (celebrate ? 'Celebrate' : ''), ending.x, ending.floorY - (ending.character === 'peach' ? 28 : 16), { flip: ending.character === 'peach' });
+            sprite(c, ending.character + (celebrate ? 'Celebrate' : ''), ending.x, ending.floorY - (ending.character === 'elara' ? 28 : 16), { flip: ending.character === 'elara' });
         }
         if (g.state !== GameState.TITLE)
             this.player(g);
         else
-            sprite(c, 'mario', 40, 192, { palette: playerPalette(g.selectedCharacter) });
+            sprite(c, 'pip', 40, 192, { palette: playerPalette(g.selectedCharacter) });
         for (const p of g.particles) {
             if (p.text)
                 text(c, p.text, p.x, p.y, '#fff', 1, 'center');
@@ -191,22 +191,22 @@ export class Renderer {
         for (const x of [31, 219])
             for (const y of [54, 121])
                 c.fillRect(x, y, 2, 2);
-        text(c, 'SUPER', 128, 59, '#6d2815', 3, 'center');
-        text(c, 'SUPER', 126, 57, '#fff0c4', 3, 'center');
-        text(c, 'MARIO BROS.', 128, 88, '#6d2815', 3, 'center');
-        text(c, 'MARIO BROS.', 126, 86, '#fff0c4', 3, 'center');
+        text(c, 'PIXELBOUND', 128, 59, '#6d2815', 3, 'center');
+        text(c, 'PIXELBOUND', 126, 57, '#fff0c4', 3, 'center');
+        text(c, 'ADVENTURE', 128, 88, '#6d2815', 3, 'center');
+        text(c, 'ADVENTURE', 126, 86, '#fff0c4', 3, 'center');
         text(c, 'THE 8-BIT ADVENTURE', 128, 115, '#ffe5b1', 1, 'center');
         text(c, '1 PLAYER GAME', 128, 138, '#fff1df', 1, 'center');
         text(c, 'SELECT PLAYER', 128, 152, '#fff1df', 1, 'center');
-        text(c, 'MARIO', 116, 166); text(c, 'LUIGI', 116, 180);
-        text(c, '>', 102, g.selectedCharacter === 'mario' ? 166 : 180);
-        sprite(c, 'mario', 158, 165, { palette: playerPalette(g.selectedCharacter) });
+        text(c, 'PIP', 116, 166); text(c, 'ROWAN', 116, 180);
+        text(c, '>', 102, g.selectedCharacter === 'pip' ? 166 : 180);
+        sprite(c, 'pip', 158, 165, { palette: playerPalette(g.selectedCharacter) });
         text(c, 'PRESS ENTER TO START', 128, 197, '#fff1df', 1, 'center');
         text(c, 'TOP ' + String(g.best).padStart(6, '0'), 128, 224, '#fff1df', 1, 'center');
     }
     private screen(g: Game) { const c = this.ctx; if (g.state === GameState.LEVEL_INTRO) {
         text(c, 'WORLD ' + g.world, 128, 84, '#fff1df', 2, 'center');
-        sprite(c, 'mario', 103, 116, { palette: playerPalette(g.selectedCharacter) });
+        sprite(c, 'pip', 103, 116, { palette: playerPalette(g.selectedCharacter) });
         text(c, 'X ' + g.lives, 130, 121);
         text(c, g.level.name, 128, 157, '#a3adb9', 1, 'center');
     }
@@ -217,8 +217,8 @@ export class Renderer {
     }
     else {
         text(c, `THANK YOU ${g.character.displayName}!`, 128, 66, '#ffca68', 2, 'center');
-        sprite(c, 'marioBigCelebrate', 104, 99, { palette: playerPalette(g.selectedCharacter, g.player.power) });
-        sprite(c, 'peachCelebrate', 136, 99, { flip: true });
+        sprite(c, 'pipBigCelebrate', 104, 99, { palette: playerPalette(g.selectedCharacter, g.player.power) });
+        sprite(c, 'elaraCelebrate', 136, 99, { flip: true });
         text(c, 'THE KINGDOM IS SAFE.', 128, 146, '#fff1df', 1, 'center');
         text(c, 'FINAL SCORE ' + String(g.score).padStart(6, '0'), 128, 166, '#a3adb9', 1, 'center');
         text(c, 'PRESS ENTER TO PLAY AGAIN', 128, 194, '#ffca68', 1, 'center');

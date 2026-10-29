@@ -125,8 +125,8 @@ function fortress(id: LevelId, pits: number[][], bars: number[], maze = false) {
     rect(l, end - 16, 11, 16, 1, 'brick');
     l.lava ??= []; l.lava.push({ x: (end - 16) * 16, y: 223, width: 16 * 16 });
     l.bridge = { start: end - 16, end, row: 11 };
-    l.bowser = { firePeriod: Math.max(65, 115 - world * 5), jumpPeriod: 120 - world * 4, hammers: world >= 6 };
-    enemy(l, 'bowser', end - 6, 9);
+    l.brimstone = { firePeriod: Math.max(65, 115 - world * 5), jumpPeriod: 120 - world * 4, hammers: world >= 6 };
+    enemy(l, 'brimstone', end - 6, 9);
     l.axe = true; l.goal = end * 16;
     return l;
 }
@@ -183,11 +183,11 @@ export function remainingLevels(underground: LevelDefinition): LevelDefinition[]
     add(laterOverworld('8-1', 'The long road', 278, [[49, 4], [87, 5], [134, 4], [181, 5], [226, 4]], [[32, 11], [74, 10], [119, 11], [164, 10], [213, 11]], [['goomba', [25, 29, 63, 67, 102, 107, 149, 153, 197, 201, 237]], ['buzzy', [41, 113, 173, 244]], ['green', [59, 96, 144, 192]]]));
     const v82 = add(laterOverworld('8-2', 'Under siege', 226, [[60, 5], [110, 5], [163, 5]], [[35, 11], [93, 10], [145, 11]], [['lakitu', [27]], ['buzzy', [47, 80, 129, 184]]])); [75, 122, 177, 195].forEach(x => cannon(v82, x));
     const v83 = add(laterOverworld('8-3', 'The castle approach', 220, [[87, 3], [151, 3]], [[57, 11], [131, 10]], [['hammerBro', [32, 70, 107, 143, 174, 190]], ['green', [47, 119, 163]]])); [28, 100, 169].forEach(x => rect(v83, x, 9, 10, 1, 'brick'));
-    const final = add(fortress('8-4', [[22, 5], [51, 5]], [36])); final.name = 'The final labyrinth'; final.goal = 99999; final.axe = false; final.enemies = final.enemies.filter(e => e.kind !== 'bowser'); final.bridge = undefined;
+    const final = add(fortress('8-4', [[22, 5], [51, 5]], [36])); final.name = 'The final labyrinth'; final.goal = 99999; final.axe = false; final.enemies = final.enemies.filter(e => e.kind !== 'brimstone'); final.bridge = undefined;
     pipe(final, 69, 10); pipe(final, 87, 10); final.pipes = [{ x: 69 * 16, y: 160, target: '8-4-hall', spawnX: 40, spawnY: 192 }, { x: 87 * 16, y: 160, target: '8-4', spawnX: 40, spawnY: 192 }]; rect(final, 92, 4, 2, 9, 'stone');
     const hall = makeLevel('8-4-hall', 'Choose the high pipe', 'castle', 80); hall.stageId = '8-4'; hall.goal = 99999; floor(hall, [[0, 80]]); reward(hall, 12); pipe(hall, 30, 11); pipe(hall, 49, 8); rect(hall, 44, 11, 3, 2, 'stone'); enemy(hall, 'hammerBro', 39); hall.pipes = [{ x: 30 * 16, y: 176, target: '8-4', spawnX: 40, spawnY: 192 }, { x: 49 * 16, y: 128, target: '8-4-water', spawnX: 40, spawnY: 144 }]; rect(hall, 60, 3, 2, 10, 'stone'); add(hall);
-    const wet = water('8-4', 150); wet.id = '8-4-water'; wet.name = 'The flooded vault'; wet.pipes[0].target = '8-4-bowser'; wet.pipes[0].spawnY = 192; wet.firebars.push({ x: 74 * 16, y: 140, length: 5, speed: -.025 }); add(wet);
-    const boss = fortress('8-4', [[24, 5], [50, 6], [85, 4]], [35, 69, 102]); boss.id = '8-4-bowser'; boss.name = 'The last Bowser'; add(boss);
+    const wet = water('8-4', 150); wet.id = '8-4-water'; wet.name = 'The flooded vault'; wet.pipes[0].target = '8-4-brimstone'; wet.pipes[0].spawnY = 192; wet.firebars.push({ x: 74 * 16, y: 140, length: 5, speed: -.025 }); add(wet);
+    const boss = fortress('8-4', [[24, 5], [50, 6], [85, 4]], [35, 69, 102]); boss.id = '8-4-brimstone'; boss.name = 'King Brimstone'; add(boss);
     const bonus = makeLevel('2-1-bonus', 'A room of coins', 'underground', 32); bonus.stageId = '2-1'; bonus.bonus = true; bonus.goal = 99999; floor(bonus, [[0, 32]]); rect(bonus, 7, 10, 12, 3, 'brick'); for (let y = 6; y < 10; y++) coins(bonus, 8, y, 10); pipe(bonus, 25, 10); bonus.pipes.push({ x: 400, y: 160, target: '2-1', spawnX: 120 * 16 + 10, spawnY: 160 }); add(bonus);
     return result;
 }

@@ -4,7 +4,7 @@ import type { Game } from './Game';
 import type { EnemySpawn } from '../world/Level';
 
 export function createEnemy(e: EnemySpawn): Enemy {
-    return { ...body(e.x, e.y, e.kind === 'bowser' ? 28 : 12, e.kind === 'bowser' ? 32 : e.kind === 'plant' ? 24 : 16), kind: e.kind, homeX: e.x, homeY: e.y, phase: 0, shell: false, dead: 0, active: false, health: 5, safe: 0, vx: -.5 };
+    return { ...body(e.x, e.y, e.kind === 'brimstone' ? 28 : 12, e.kind === 'brimstone' ? 32 : e.kind === 'plant' ? 24 : 16), kind: e.kind, homeX: e.x, homeY: e.y, phase: 0, shell: false, dead: 0, active: false, health: 5, safe: 0, vx: -.5 };
 }
 export function specialEnemy(g: Game, e: Enemy): boolean {
     const p = g.player;
