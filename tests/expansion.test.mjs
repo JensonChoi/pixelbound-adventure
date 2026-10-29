@@ -65,6 +65,33 @@ test('water has repeated swim strokes, sinking, collision, and resets on exit', 
     g.input.set('jump','jump',false);ticks(g);g.input.set('jump','jump',true);ticks(g);assert.equal(g.player.vy,first);
     g.load('2-2-exit');assert.equal(g.player.swimming,false);
 });
+for (const id of ['7-2', '8-4-water']) {
+    test(`${id} has two open tile rows above the shared underwater column`, () => {
+        for (const x of [110, 111]) {
+            assert.ok(LEVELS[id].tiles[`${x},2`]);
+            for (const y of [3, 4]) assert.equal(LEVELS[id].tiles[`${x},${y}`], undefined);
+            assert.ok(LEVELS[id].tiles[`${x},5`]);
+        }
+    });
+    for (const character of ['pip', 'rowan']) for (const power of [0, 1, 2]) {
+        test(`${character} with power ${power} can swim through the ${id} column passage`, () => {
+            const g = new Game(); g.selectCharacter(character); g.load(id); g.change(GameState.PLAYING); g.player.setPower(power);
+            g.player.x = 108 * 16; g.player.y = 80 - g.player.h;
+            g.input.set('right', 'right', true);
+            for (let frame = 0; frame < 90 && g.player.x < 113 * 16; frame++) {
+                g.input.set('jump', 'jump', frame % 20 === 0);
+                ticks(g);
+                assert.equal(g.state, GameState.PLAYING);
+                assert.equal(g.player.power, power);
+                assert.equal(g.player.h, power ? 28 : 16);
+                assert.equal(g.lives, 5);
+                assert.ok(!blocked(g.level, g.player));
+            }
+            assert.ok(g.player.x >= 113 * 16, 'player must fully cross the column');
+            assert.equal(g.selectedCharacter, character);
+        });
+    }
+}
 test('maze failures rewind position and camera without duplicating state', () => {
     for(const id of ['4-4','7-4']) {
         const g=playing(id),gate=g.level.mazes[0];const enemies=g.enemies;const score=g.score;

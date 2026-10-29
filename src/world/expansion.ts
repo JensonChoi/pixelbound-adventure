@@ -70,7 +70,7 @@ function water(id: LevelId, width: number): LevelDefinition {
     l.spawn.y = 144;
     const columns = id === '2-2' ? [[24, 10], [43, 8], [67, 10], [94, 7], [122, 9]] : [[18, 8], [38, 6], [60, 9], [82, 7], [110, 5], [138, 8], [158, 7]];
     for (const [x, top] of columns) { rect(l, x, top, 2, 13 - top, 'stone'); coins(l, x + 3, 6, 4); }
-    rect(l, 54, 3, 9, 2, 'stone'); rect(l, 104, 3, 8, 1, 'stone');
+    rect(l, 54, 3, 9, 2, 'stone'); rect(l, 104, 2, 8, 1, 'stone');
     reward(l, 10, 8); reward(l, 78, 8);
     foes(l, 'cheep', id === '2-2' ? [32, 60, 105] : [28, 54, 76, 125, 149], 9);
     foes(l, 'blooper', id === '2-2' ? [51, 115] : [46, 96, 142], 6);
