@@ -1,16 +1,16 @@
 // Hand-drawn grids. Each character is one pixel; no external sprite assets.
 export const PALETTE: Record<string, string> = { r: '#d43b21', s: '#ffb66b', b: '#793b20', k: '#211b15', w: '#fff1d2', g: '#73ad12', G: '#286b0b', y: '#ffc437', o: '#e88325', c: '#70c9e8', B: '#3265b0', h: '#d43b21', a: '#793b20', f: '#793b20', p: '#ed789e', P: '#b93665' };
 export const SPRITES: Record<string, string[]> = {
-    toad: [
+    moss: [
         '.....wwwwww.....', '...wwwrrwwwww...', '..wwwwrrwwrrww..', '.wrrwwwwwwrrwww.', '.wrrwwrrwwwwwww.', '.wwwwwrrwwwwwww.', '..wwwwwwwwwwww..', '....ssksksss....', '....ssssssss....', '.....ssssss.....', '...BBswwwwsBB...', '..sBBswwwwsBBs..', '..ssswwwwwwsss..', '....wwwwwwww....', '....www..www....', '...bbbb..bbbb...'
     ],
-    peach: [
+    elara: [
         '.....y..y..y....', '.....yyyyyyy....', '.....yoyoyyy....', '....yyyyyyyy....', '...yyyyssssyy...', '...yyyssksyyy...', '...yyyssssyyy...', '...yyyssskyyy...', '....yyyssyyyy...', '....yyyssyyy....', '.....pppppp.....', '....pppccppp....', '...ssppccppss...', '...ssppppppss...', '...ssppppppss...', '....ssppppss....', '.....wwwwww.....', '.....pppppp.....', '....pppPPppp....', '....pppPPppp....', '...ppppPPpppp...', '...ppppPPpppp...', '..pppppPPppppp..', '..pppppPPppppp..', '.ppppppPPpppppp.', '.wwwwwwwwwwwwww.', '.wwwwwwwwwwwwww.', '....fff..fff....'
     ],
-    mario: [
+    pip: [
         '.....rrrrrr.....', '....rrrrrrrrr...', '....bbbssks.....', '...bsbsssksss...', '...bsbbsssksbs..', '....bsssskkkk...', '.....ssssss.....', '....rrbrrbrr....', '...rrrbrrbrrr...', '..rrrrbbbbrrrr..', '..ssrbybbybrss..', '..sssbbbbbbsss..', '....bbbbbbbb....', '....bbb..bbb....', '...bbb....bbb...', '..bbbb....bbbb..'
     ],
-    marioBig: [
+    pipBig: [
         '.....rrrrrr.....', '....rrrrrrrrr...', '....bbbssks.....', '...bsbsssksss...', '...bsbbsssksbs..', '....bsssskkkk...', '.....ssssss.....', '......ssss......',
         '....rrrrrrr.....', '...rrrbrrbrr....', '..rrrrbrrbrrr...', '..rrrrbrrbrrr...', '..rrrrbbbbrrrr..', '..rrrrbbbbrrrr..', '..ssrbybbybrss..', '..sssbbbbbbsss..', '..sssbbbbbbsss..', '...ssbbbbbbss...',
         '....bbbbbbbb....', '....bbbbbbbb....', '....bbbbbbbb....', '....bbb..bbb....', '....bbb..bbb....', '....bbb..bbb....', '....bbb..bbb....', '...bbbb..bbbb...', '..bbbbb..bbbbb..', '..bbbbb..bbbbb..'
@@ -36,7 +36,7 @@ export const SPRITES: Record<string, string[]> = {
     plant: [
         '....rrrrrr......', '..rrwrrrwrrr....', '.rrrwwrrwwrrr...', 'rrwrrrwwrrrwrr..', 'rrrwwrrrrwwrrr..', 'rrrrwwwwwwrrrr..', '.rrkkkkkkkkrr...', '..rwwwwwwwwr....', '...rrrrrrrr.....', '......gg........', '..gg..gg..gg....', '...gggggggg.....', '....gggggg......', '......gg........', '......gg........', '......gg........'
     ],
-    bowser: [
+    brimstone: [
         '....ww..ww......', '...wggwwggw.....', '..gggggggggg....', '.gggkwggkwggg...', '.gggkwggkwgggs..', 'gggggggggggssss.', 'gggwwwwwwggssss.', 'ggwwkkkkwwgsss..', 'gggwwwwwwgggg...', '.ggggggggggggg..', '..gggyyyygggggg.', '.gggyyyyyyggggg.', 'ggggyyyyyyggggg.', 'ggggyyyyyygggg..', '.gggggggggggg...', '..www....www....'
     ],
     cheep: ['.....rrrr.......', '...rrwwrrr......', '..rrwwwwrrr.....', '.rrwwkwrrwww....', 'rrrwwwkrrwwww...', '.rrrrrrrrwww....', '..rrssssrr......', '...ssssss.......', '....ss..ss......'],
@@ -50,11 +50,11 @@ export const SPRITES: Record<string, string[]> = {
     hammer: ['..kkkkkk........', '..kwwwwk........', '..kkkkkk........', '....bb..........', '....bb..........', '....bb..........', '....bb..........'],
     axe: ['......kkkk......', '.....kwwwwk.....', '....kwwwwwwk....', '....kwwwwwwk....', '.....kwwwwk.....', '......kbbk......', '.......bb.......', '.......bb.......', '.......bb.......', '.......bb.......', '.......bb.......', '.......bb.......', '.......bb.......', '.......bb.......', '................', '................']
 };
-for (const name of ['mario', 'marioBig']) {
+for (const name of ['pip', 'pipBig']) {
     // Separate hat, hair and shoes from clothing without duplicating character grids.
     SPRITES[name] = SPRITES[name].map((row, y, grid) => y < 2 ? row.replaceAll('r', 'h') : y < 7 ? row.replaceAll('b', 'a') : y >= grid.length - 2 ? row.replaceAll('b', 'f') : row);
     const swim = [...SPRITES[name]], climb = [...SPRITES[name]];
-    const arm = name === 'mario' ? 8 : 12;
+    const arm = name === 'pip' ? 8 : 12;
     swim[arm] = 'ssssrrbbbbrr....'; swim[arm + 1] = '.sssrrbbbbrr....';
     swim[swim.length - 2] = '....bbbbbbbb....'; swim[swim.length - 1] = '........bbbbbb..';
     climb[arm] = '..ssrrbbbbrrss..'; climb[arm + 1] = '..ssrrbbbbrrss..';
@@ -66,9 +66,9 @@ for (const name of ['mario', 'marioBig']) {
     celebrating[arm] = '.rrr' + celebrating[arm].slice(4, 12) + 'rrr.';
     SPRITES[name + 'Throw'] = throwing; SPRITES[name + 'Celebrate'] = celebrating;
 }
-SPRITES.marioCrouch = [...SPRITES.marioBig.slice(0, 7), ...SPRITES.marioBig.slice(12, 17), ...SPRITES.marioBig.slice(-4)];
-for (const name of ['toad', 'peach']) {
-    const pose = [...SPRITES[name]], arm = name === 'toad' ? 10 : 12;
+SPRITES.pipCrouch = [...SPRITES.pipBig.slice(0, 7), ...SPRITES.pipBig.slice(12, 17), ...SPRITES.pipBig.slice(-4)];
+for (const name of ['moss', 'elara']) {
+    const pose = [...SPRITES[name]], arm = name === 'moss' ? 10 : 12;
     pose[arm - 2] = 'ss' + pose[arm - 2].slice(2, 14) + 'ss';
     pose[arm - 1] = '.ss' + pose[arm - 1].slice(3, 13) + 'ss.';
     pose[arm] = '..ss' + pose[arm].slice(4, 12) + 'ss..';

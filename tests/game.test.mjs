@@ -25,7 +25,7 @@ test('holding jump produces a higher arc than tapping',()=>{
 test('question blocks grant one reward and restart restores geometry',()=>{
  const g=playing();const t=g.level.tiles[key(16,9)];g.hitBlock(16,9,t);g.hitBlock(16,9,t);assert.equal(g.coins,1);assert.equal(t.kind,'used');g.restart();assert.equal(g.lives,4);assert.equal(g.level.tiles[key(16,9)].kind,'question');assert.equal(g.enemies.length,LEVELS['1-1'].enemies.length);
 });
-test('small Mario bumps bricks; Super Mario breaks them with debris',()=>{
+test('small Pip bumps bricks; Super Pip breaks them with debris',()=>{
  const g=playing();g.hitBlock(20,9,g.level.tiles[key(20,9)]);assert.ok(g.level.tiles[key(20,9)]);g.player.setPower(1);g.hitBlock(20,9,g.level.tiles[key(20,9)]);assert.equal(g.level.tiles[key(20,9)],undefined);assert.equal(g.particles.filter(p=>!p.text).length,4);
 });
 test('a hidden block appears only when struck from below',()=>{
@@ -81,16 +81,16 @@ test('moving platforms carry a standing player without sinking',()=>{
 test('red Koopas turn at edges while green Koopas fall',()=>{
  for(const kind of ['red','green']){const g=playing();g.level=makeLevel('test','test','overworld',32);rect(g.level,4,10,4,1,'stone');const e={...g.enemies[0],kind,x:116,y:144,vx:.5,grounded:true};g.enemies=[e];g.player.x=40;g.player.y=192;g.player.star=999;for(let i=0;i<30;i++){g.player.y=192;g.update();}if(kind==='red')assert.ok(e.vx<0);else assert.ok(e.y>144);}
 });
-test('Piranha Plants wait while Mario stands on their pipe',()=>{
+test('Piranha Plants wait while Pip stands on their pipe',()=>{
  const g=playing();const e=g.enemies.find(e=>e.kind==='plant');g.player.x=e.homeX;g.player.y=e.homeY-16;g.player.grounded=true;g.camera=e.x-100;tick(g,150);assert.ok(e.y>=e.homeY-3);assert.equal(g.lives,5);
 });
-test('Bowser takes five fireball hits and the axe still completes the course',()=>{
- const g=playing('1-4');const e=g.enemies.find(e=>e.kind==='bowser');g.player.x=e.x-80;g.camera=g.player.x-100;g.player.y=100;g.player.star=100;for(let i=0;i<5;i++){g.projectiles.push({...body(e.x+5,e.y+10,6,6),vx:0,vy:0,life:50,hostile:false});tick(g);}assert.ok(e.dead>0);assert.ok(g.score>=5000);g.player.x=g.level.goal;g.player.y=160;tick(g);assert.equal(g.state,GameState.LEVEL_COMPLETE);
+test('King Brimstone takes five fireball hits and the axe still completes the course',()=>{
+ const g=playing('1-4');const e=g.enemies.find(e=>e.kind==='brimstone');g.player.x=e.x-80;g.camera=g.player.x-100;g.player.y=100;g.player.star=100;for(let i=0;i<5;i++){g.projectiles.push({...body(e.x+5,e.y+10,6,6),vx:0,vy:0,life:50,hostile:false});tick(g);}assert.ok(e.dead>0);assert.ok(g.score>=5000);g.player.x=g.level.goal;g.player.y=160;tick(g);assert.equal(g.state,GameState.LEVEL_COMPLETE);
 });
 test('star expiry restores vulnerability and pause freezes hazard angles',()=>{
  const g=playing('1-4');g.player.star=2;tick(g,2);assert.equal(g.player.star,0);const frame=g.frame;g.pause();tick(g,50);assert.equal(g.frame,frame);g.resume();g.damage();assert.equal(g.state,GameState.PLAYER_DYING);
 });
-test('growth under a low ceiling crouches instead of embedding Mario',()=>{
+test('growth under a low ceiling crouches instead of embedding Pip',()=>{
  const g=playing();g.enemies=[];block(g.level,2,11,'stone');g.pickups.push({...body(40,192,12,14),kind:'power',emerge:0,homeY:192});tick(g);assert.equal(g.player.power,1);assert.equal(g.player.h,16);assert.ok(!blocked(g.level,g.player));
 });
 test('input supports alternate sources and clears all held actions on blur',()=>{

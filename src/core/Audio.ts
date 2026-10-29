@@ -1,5 +1,5 @@
 import type { Theme } from '../world/Level';
-export type Sound = 'jump' | 'coin' | 'bump' | 'break' | 'emerge' | 'power' | 'stomp' | 'kick' | 'fire' | 'damage' | 'death' | 'life' | 'flag' | 'complete' | 'rescueToad' | 'rescuePeach' | 'victory';
+export type Sound = 'jump' | 'coin' | 'bump' | 'break' | 'emerge' | 'power' | 'stomp' | 'kick' | 'fire' | 'damage' | 'death' | 'life' | 'flag' | 'complete' | 'rescueMoss' | 'rescueElara' | 'victory';
 const melodies: Record<string, number[]> = { overworld: [76, 0, 79, 0, 84, 83, 79, 76, 77, 0, 81, 0, 79, 76, 74, 72, 76, 79, 84, 88, 86, 84, 79, 0, 81, 77, 74, 71, 72, 0, 0, 0], underground: [48, 60, 51, 63, 46, 58, 49, 61, 48, 0, 55, 0, 51, 0, 46, 0], castle: [45, 52, 57, 60, 59, 52, 56, 59, 45, 52, 57, 60, 62, 59, 56, 52], star: [84, 79, 84, 88, 86, 81, 86, 89, 88, 84, 88, 91, 89, 86, 89, 93] };
 export class AudioManager {
     context: AudioContext | null = null;
@@ -13,11 +13,11 @@ export class AudioManager {
         return; const c = this.context; const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(freq, c.currentTime); if (slide)
         o.frequency.exponentialRampToValueAtTime(slide, c.currentTime + duration); g.gain.setValueAtTime(volume, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + duration); }
     play(s: Sound) {
-        if (s === 'rescueToad' || s === 'rescuePeach' || s === 'victory') {
-            this.fanfare(s === 'rescueToad' ? [72, 76, 79, 84] : s === 'rescuePeach' ? [76, 79, 84, 83, 84] : [72, 76, 79, 84, 79, 84, 88, 84]);
+        if (s === 'rescueMoss' || s === 'rescueElara' || s === 'victory') {
+            this.fanfare(s === 'rescueMoss' ? [72, 76, 79, 84] : s === 'rescueElara' ? [76, 79, 84, 83, 84] : [72, 76, 79, 84, 79, 84, 88, 84]);
             return;
         }
-        const tones: Record<Exclude<Sound, 'rescueToad' | 'rescuePeach' | 'victory'>, [
+        const tones: Record<Exclude<Sound, 'rescueMoss' | 'rescueElara' | 'victory'>, [
         number,
         number,
         number

@@ -7,7 +7,7 @@ export interface Tile {
     item?: ItemKind;
     bump: number;
 }
-export type EnemyKind = 'goomba' | 'green' | 'red' | 'plant' | 'bowser' | 'cheep' | 'leapingCheep' | 'blooper' | 'hammerBro' | 'lakitu' | 'spiny' | 'egg' | 'bullet' | 'buzzy' | 'podoboo';
+export type EnemyKind = 'goomba' | 'green' | 'red' | 'plant' | 'brimstone' | 'cheep' | 'leapingCheep' | 'blooper' | 'hammerBro' | 'lakitu' | 'spiny' | 'egg' | 'bullet' | 'buzzy' | 'podoboo';
 export interface EnemySpawn {
     kind: EnemyKind;
     x: number;
@@ -17,7 +17,7 @@ export type LevelId = `${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}-${1 | 2 | 3 | 4}`;
 export type CastleEndingConfig = {
     x: number;
     floorY: number;
-} & ({ character: 'toad'; nextLevel: LevelId } | { character: 'peach'; nextLevel?: never });
+} & ({ character: 'moss'; nextLevel: LevelId } | { character: 'elara'; nextLevel?: never });
 export interface VineDef { x: number; bottom: number; top: number; target: string; spawnX: number; spawnY: number; }
 export interface MazeGate { x: number; minY: number; maxY: number; returnX: number; returnY: number; }
 export interface PlatformDef {
@@ -51,7 +51,7 @@ export interface LevelDefinition {
     mazes?: MazeGate[];
     cannons?: { x: number; y: number; period: number }[];
     bridge?: { start: number; end: number; row: number };
-    bowser?: { firePeriod: number; jumpPeriod: number; hammers: boolean };
+    brimstone?: { firePeriod: number; jumpPeriod: number; hammers: boolean };
     ending?: CastleEndingConfig;
     name: string;
     theme: Theme;

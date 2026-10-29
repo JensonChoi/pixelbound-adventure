@@ -8,16 +8,16 @@ The [NES map collection](https://www.mariouniverse.com/maps-nes-smb/) and [map r
 
 | World | Stage 1 | Stage 2 | Stage 3 | Stage 4 |
 | --- | --- | --- | --- | --- |
-| 1 | Original blocks, pipes, coin room | Original underground course; added exit lift, roof passage, 4/3/2 chamber | Original treetops and lifts | Original fire bars, Bowser, bridge; advances to 2-1 |
+| 1 | Original blocks, pipes, coin room | Original underground course; added exit lift, roof passage, 4/3/2 chamber | Original treetops and lifts | Original fire bars, King Brimstone, bridge; advances to 2-1 |
 | 2 | Pipes, stair pairs, coin room | Coral columns, ceiling obstacles, Cheeps and Bloopers | Broken bridges and leaping fish | Lava bridges and fire bars |
 | 3 | Night pipes and two Hammer Bro platforms | Dense enemies for shell chains | Elevated steps and paired balance lifts | Offset lava pits and longer bars |
 | 4 | Lakitu pursuit | Ceiling warp to 5; hidden blocks and vine to 6/7/8 | Mushroom caps, balance and falling lifts | Upper route, then lower route |
 | 5 | Beetles and cannon batteries | Raised battlements, Hammer Bros. | Narrow elevated landings | Wider lava crossings |
-| 6 | Night Lakitu pursuit | Dense tall-pipe formations | Night platforms and lifts | Faster Bowser attacks and hammers |
+| 6 | Night Lakitu pursuit | Dense tall-pipe formations | Night platforms and lifts | Faster King Brimstone attacks and hammers |
 | 7 | Cannon boulevard and Hammer Bros. | Denser underwater columns and enemies | Longer flying-fish bridges | Lower, middle, upper route sequence |
-| 8 | Long course with momentum gaps | Lakitu, cannons, tightly spaced obstacles | Repeated Hammer Bro battlements | Connected pipe maze, flooded vault, final Bowser |
+| 8 | Long course with momentum gaps | Lakitu, cannons, tightly spaced obstacles | Repeated Hammer Bro battlements | Connected pipe maze, flooded vault, final King Brimstone |
 
-Castle layouts use shared construction helpers with distinct pit, fire-bar, and maze data. They intentionally simplify original NES geometry. The 7-4 lower/middle/upper sequence is this implementation's authored approximation. In 8-4, take the first room's pipe at tile 69, the raised pipe in the next hall, then the flooded vault's exit; alternate pipes return to the first room. The final axe releases the bridge and completes the game, whether Bowser is alive or has been defeated with fireballs.
+Castle layouts use shared construction helpers with distinct pit, fire-bar, and maze data. They intentionally simplify original NES geometry. The 7-4 lower/middle/upper sequence is this implementation's authored approximation. In 8-4, take the first room's pipe at tile 69, the raised pipe in the next hall, then the flooded vault's exit; alternate pipes return to the first room. The final axe releases the bridge and completes the game, whether King Brimstone is alive or has been defeated with fireballs.
 
 ## Mechanics and state
 
@@ -27,12 +27,12 @@ Same-stage room travel preserves the timer and saved blocks, enemies, pickups, l
 
 Water uses a separate acceleration, gravity, speed, and swim-stroke profile. Up/W attaches to and climbs a revealed vine; Down descends; Jump detaches. Vines must actually be climbed before changing areas. New enemy movement and projectile patterns are deterministic. Buzzy Beetles resist fireballs, Spinies resist normal stomps, and lava kills immediately even during star invincibility. Balance lifts move in opposing directions; falling platforms accelerate after being stepped on.
 
-Maze gates test Mario's feet against authored vertical intervals. An incorrect route rewinds position and camera within the existing room, preserving enemies and collected items rather than spawning duplicates. The normal camera remains forward-scrolling; warp chambers increase its forward view enough to show the destination pipes.
+Maze gates test Pip's feet against authored vertical intervals. An incorrect route rewinds position and camera within the existing room, preserving enemies and collected items rather than spawning duplicates. The normal camera remains forward-scrolling; warp chambers increase its forward view enough to show the destination pipes.
 
 ## Verification and tools
 
 - `npm run typecheck`: strict TypeScript, including the browser replay viewer.
-- `npm test`: existing gameplay coverage plus full-course replays for all 32 stages, full discovery/entry replays for all seven warp destinations, persistent-state checks for Small/Super/Fire Mario, all progression boundaries, maze retries, new enemy interactions, water/vines/lifts, and final victory.
+- `npm test`: existing gameplay coverage plus full-course replays for all 32 stages, full discovery/entry replays for all seven warp destinations, persistent-state checks for Small/Super/Fire Pip, all progression boundaries, maze retries, new enemy interactions, water/vines/lifts, and final victory.
 - `npm run build`: Vite production assets and self-contained offline `dist/play.html`. Both exclude the development selector. Generated build/test artifacts are ignored by Git.
 - `npm run dev`: normal game plus a development-only level selector. `/tests/browser.html` replays fixtures through the actual renderer and can stop at a warp chamber, mid-course, destination, or victory.
 - `node scripts/find-route.mjs <stage> complete <output.json>`: optional fixture authoring tool. It searches input sequences against copies of the real simulation. Tests replay the resulting inputs from a fresh stage; no coordinate changes, disabled enemies, or invulnerability are used during traversal. Existing fixtures must not be changed simply to conceal a regression.

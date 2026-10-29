@@ -49,7 +49,7 @@ function score(game: Game) {
         if (!link) return -10000;
         return -Math.abs(game.player.x - (link.x+10))*2 - Math.abs(game.player.y - (link.y-game.player.h))*.3 + (game.state===GameState.PIPE?200:0);
     }
-    const areas = id === '8-4' ? ['8-4', '8-4-hall', '8-4-water', '8-4-bowser'] : [id, `${id}-exit`];
+    const areas = id === '8-4' ? ['8-4', '8-4-hall', '8-4-water', '8-4-brimstone'] : [id, `${id}-exit`];
     const area = areas.indexOf(game.level.id);
     if (area < 0) return -10000;
     let progress = game.player.x;

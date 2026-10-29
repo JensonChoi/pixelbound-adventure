@@ -30,7 +30,7 @@ interface Snapshot {
 }
 export class Game {
     state = GameState.TITLE;
-    private characterId: CharacterId = 'mario';
+    private characterId: CharacterId = 'pip';
     castlePhase: CastleEndingPhase | null = null;
     castleTicks = 0;
     player = new Player();
@@ -67,7 +67,7 @@ export class Game {
     }
     get rescueDialogue(): string[] {
         if (this.castlePhase !== 'dialogue') return [];
-        return [`THANK YOU ${this.character.displayName}!`, ...(this.level.ending?.character === 'peach'
+        return [`THANK YOU ${this.character.displayName}!`, ...(this.level.ending?.character === 'elara'
             ? ['YOUR QUEST IS OVER.', 'YOU SAVED THE PRINCESS!']
             : ['BUT OUR PRINCESS IS', 'IN ANOTHER CASTLE!'])];
     }
@@ -180,8 +180,8 @@ export class Game {
             this.frame++;
         this.stateTicks++;
         if (this.state === GameState.TITLE) {
-            if (this.input.tap('up')) this.selectCharacter('mario');
-            else if (this.input.tap('down')) this.selectCharacter('luigi');
+            if (this.input.tap('up')) this.selectCharacter('pip');
+            else if (this.input.tap('down')) this.selectCharacter('rowan');
         }
         if (this.input.tap('start')) {
             if ([GameState.TITLE, GameState.GAME_OVER, GameState.VICTORY].includes(this.state))
@@ -397,13 +397,13 @@ export class Game {
                 if (e.y >= e.homeY - 3)
                     continue;
             }
-            else if (e.kind === 'bowser') {
+            else if (e.kind === 'brimstone') {
                 e.vx = Math.sin(e.phase * .025) * .7;
-                if (e.grounded && e.phase % (this.level.bowser?.jumpPeriod ?? 120) === 0)
+                if (e.grounded && e.phase % (this.level.brimstone?.jumpPeriod ?? 120) === 0)
                     e.vy = -3.6;
                 e.vy = Math.min(4, e.vy + .16);
                 move(e, this.level);
-                if (e.phase % (this.level.bowser?.firePeriod ?? 100) === 0)
+                if (e.phase % (this.level.brimstone?.firePeriod ?? 100) === 0)
                     this.projectiles.push({ ...body(e.x, e.y + 9, 12, 6), vx: -1.8, vy: 0, life: 240, hostile: true });
             }
             else {
@@ -415,7 +415,7 @@ export class Game {
                 if (hit.wall)
                     e.vx = -vx;
             }
-            if (e.kind === 'bowser' && this.level.bowser?.hammers && e.phase % 130 === 0) this.projectiles.push({ ...body(e.x, e.y, 8, 10), vx: -1.5, vy: -3.6, life: 120, hostile: true, kind: 'hammer' });
+            if (e.kind === 'brimstone' && this.level.brimstone?.hammers && e.phase % 130 === 0) this.projectiles.push({ ...body(e.x, e.y, 8, 10), vx: -1.5, vy: -3.6, life: 120, hostile: true, kind: 'hammer' });
             if (e.shell && Math.abs(e.vx) > 1)
                 for (const other of this.enemies)
                     if (other !== e && !other.dead && other.kind !== 'plant' && other.kind !== 'podoboo' && overlaps(e, other))
@@ -426,7 +426,7 @@ export class Game {
                 this.defeat(e, 200);
                 continue;
             }
-            const stomp = p.vy >= 0 && oldBottom <= e.y + 7 && !['plant', 'bowser', 'spiny', 'egg', 'podoboo', 'blooper'].includes(e.kind) && !p.swimming;
+            const stomp = p.vy >= 0 && oldBottom <= e.y + 7 && !['plant', 'brimstone', 'spiny', 'egg', 'podoboo', 'blooper'].includes(e.kind) && !p.swimming;
             if (stomp) {
                 p.y = e.y - p.h;
                 p.vy = this.input.down('jump') ? -4 : -2.8;
@@ -515,7 +515,7 @@ export class Game {
             for (const e of this.enemies)
                 if (!e.dead && overlaps(f, e)) {
                     f.life = 0;
-                    if (e.kind === 'bowser') {
+                    if (e.kind === 'brimstone') {
                         if (--e.health <= 0)
                             this.defeat(e, 5000);
                     }
@@ -632,7 +632,7 @@ export class Game {
                 const x = bridge.end - this.castleTicks / 5;
                 if (x >= bridge.start) delete this.level.tiles[key(x, bridge.row)];
             }
-            for (const enemy of this.enemies) if (enemy.kind === 'bowser' && !enemy.dead) enemy.y += 2;
+            for (const enemy of this.enemies) if (enemy.kind === 'brimstone' && !enemy.dead) enemy.y += 2;
             if (this.castleTicks >= Math.max(100, (bridge.end - bridge.start) * 5)) {
                 p.x = Math.max(p.x, this.level.goal);
                 p.setPower(p.power); p.skidding = false;
@@ -655,13 +655,13 @@ export class Game {
             this.time = Math.max(0, this.time - bonus); this.addScore(bonus * 50);
             if (this.time === 0) {
                 this.castlePhase = 'dialogue'; this.castleTicks = 0; this.input.clear();
-                this.audio.play(ending.character === 'peach' ? 'rescuePeach' : 'rescueToad');
+                this.audio.play(ending.character === 'elara' ? 'rescueElara' : 'rescueMoss');
             }
         }
-        else if (this.castlePhase === 'dialogue' && (this.input.tap('start') || ending.character === 'toad' && this.castleTicks >= 240)) {
+        else if (this.castlePhase === 'dialogue' && (this.input.tap('start') || ending.character === 'moss' && this.castleTicks >= 240)) {
             this.castlePhase = 'transitioning'; this.input.clear();
             if (!this.completed.includes(this.world)) this.completed.push(this.world);
-            if (ending.character === 'peach') {
+            if (ending.character === 'elara') {
                 this.change(GameState.VICTORY); this.audio.play('victory');
             }
             else {

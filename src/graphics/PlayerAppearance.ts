@@ -8,8 +8,8 @@ export function playerPalette(character: CharacterId, power = 0, flashing = fals
 }
 
 export function playerSprite(player: Player, celebrating = false): string {
-    const base = player.h > 16 ? 'marioBig' : 'mario';
-    if (player.crouched && player.big) return 'marioCrouch';
+    const base = player.h > 16 ? 'pipBig' : 'pip';
+    if (player.crouched && player.big) return 'pipCrouch';
     if (player.swimming) return base + 'Swim';
     if (player.climbing !== null) return base + 'Climb';
     if (celebrating) return base + 'Celebrate';
